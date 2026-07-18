@@ -18,8 +18,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <header className="h-16 bg-white dark:bg-gray-800 border-b dark:border-gray-700 flex items-center justify-between px-4 md:px-6 shadow-sm z-10 shrink-0">
           <div className="flex items-center gap-3 md:hidden">
             <Sheet>
-              <SheetTrigger className="md:hidden text-gray-600 dark:text-gray-300 p-2 hover:bg-gray-100 rounded-md">
+              <SheetTrigger
+                render={
+                  <Button variant="ghost" size="icon" className="md:hidden text-gray-600 dark:text-gray-300" />
+                }
+              >
                 <Menu className="h-6 w-6" />
+                <span className="sr-only">Toggle menu</span>
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-64 bg-white dark:bg-gray-800 border-r-gray-200 dark:border-r-gray-700">
                 {/* Add VisuallyHidden Title for accessibility */}

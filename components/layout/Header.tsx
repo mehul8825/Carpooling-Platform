@@ -21,13 +21,13 @@ export async function Header() {
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-1">
-          <Link href="/find-ride">
+          <Link href="/employee/find-ride">
             <Button variant="ghost" size="sm" className="gap-2">
               <Search className="h-4 w-4" />
               Find Ride
             </Button>
           </Link>
-          <Link href="/offer-ride">
+          <Link href="/employee/offer-ride">
             <Button variant="ghost" size="sm" className="gap-2">
               <PlusCircle className="h-4 w-4" />
               Offer Ride

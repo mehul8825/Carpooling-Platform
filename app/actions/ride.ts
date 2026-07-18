@@ -18,26 +18,19 @@ export async function publishRideAction(data: {
   travelDateTime: string; // ISO string from client
   availableSeats: number;
   farePerSeat: number;
+  vehicleId: string;
 }) {
   try {
     const user = await getCurrentUserAction();
     const userId = user?.id;
     if (!userId) return { success: false, error: "Not authenticated" };
 
-    // Ensure user has a vehicle (auto-create for hackathon demo)
-    let vehicle = await prisma.vehicle.findFirst({
-      where: { driverId: userId },
+    const vehicle = await prisma.vehicle.findUnique({
+      where: { id: data.vehicleId },
     });
 
-    if (!vehicle) {
-      vehicle = await prisma.vehicle.create({
-        data: {
-          driverId: userId,
-          vehicleModel: "My Car",
-          registrationNo: "DEMO-0000",
-          seatingCapacity: 4,
-        },
-      });
+    if (!vehicle || vehicle.driverId !== userId) {
+      return { success: false, error: "Invalid vehicle selected" };
     }
 
     if (!user) throw new Error("User not found");

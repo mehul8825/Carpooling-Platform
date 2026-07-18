@@ -20,6 +20,7 @@ export default async function OfferRidePage() {
       initialStatus={status as "NEW" | "PENDING" | "APPROVED" | "REJECTED"} 
       vehicles={user.vehicles || []}
       initialRejectionReason={rejectionReason}
+      userId={user.id}
     />
   );
 }

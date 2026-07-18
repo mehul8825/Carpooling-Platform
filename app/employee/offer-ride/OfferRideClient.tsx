@@ -11,14 +11,16 @@ import { submitDriverVerificationAction, simulateAdminApprovalAction } from "@/a
 import { publishRideAction } from "@/app/actions/ride";
 import { useRouter } from "next/navigation";
 import { BackButton } from "@/components/ui/BackButton";
+import { OfferRideForm } from "@/components/ride/OfferRideForm";
 
 interface OfferRideClientProps {
   initialStatus: "NEW" | "PENDING" | "APPROVED" | "REJECTED";
   vehicles: any[];
   initialRejectionReason?: string | null;
+  userId?: string;
 }
 
-export function OfferRideClient({ initialStatus, vehicles, initialRejectionReason }: OfferRideClientProps) {
+export function OfferRideClient({ initialStatus, vehicles, initialRejectionReason, userId }: OfferRideClientProps) {
   const [driverStatus, setDriverStatus] = useState<"NEW" | "PENDING" | "APPROVED" | "REJECTED">(initialStatus);
   const router = useRouter();
 
@@ -94,6 +96,7 @@ export function OfferRideClient({ initialStatus, vehicles, initialRejectionReaso
       travelDateTime: data.date,
       availableSeats: data.seats,
       farePerSeat: data.fare,
+      vehicleId: data.vehicleId,
     });
     if (res.success) {
       toast.success("Ride published successfully!");
@@ -204,55 +207,8 @@ export function OfferRideClient({ initialStatus, vehicles, initialRejectionReaso
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <Card className="shadow-md border-blue-200">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Car className="w-6 h-6 text-blue-600" /> Publish a Ride</CardTitle>
-          <CardDescription>Share your daily commute route to find passengers.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handlePublishRide} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>From</Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                  <Input name="from" className="pl-9" placeholder="Home Address" required />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>To</Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                  <Input name="to" className="pl-9" placeholder="Office Campus" required />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Date & Time</Label>
-                <Input name="date" type="datetime-local" required />
-              </div>
-              <div className="space-y-2">
-                <Label>Available Seats</Label>
-                <Input name="seats" type="number" min="1" max="6" defaultValue="3" required />
-              </div>
-              <div className="space-y-2">
-                <Label>Vehicle</Label>
-                <select name="vehicleId" className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                  <option value="">Select a vehicle</option>
-                  {vehicles.map((v) => (
-                    <option key={v.id} value={v.id}>{v.vehicleModel} ({v.registrationNo})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label>Fare per Seat ($)</Label>
-                <Input name="fare" type="number" defaultValue="5" required />
-              </div>
-            </div>
-            <Button type="submit" className="w-full mt-4" size="lg">Publish Ride</Button>
-          </form>
-        </CardContent>
-      </Card>
+    <div className="max-w-6xl mx-auto space-y-6">
+      <OfferRideForm userId={userId} vehicles={vehicles} />
     </div>
   );
 }

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { publishRideAction } from "@/app/actions/ride";
 import { toast } from "sonner";
-import { Loader2, MapPin, Clock, Users, IndianRupee, Route, CheckCircle } from "lucide-react";
+import { Loader2, MapPin, Clock, Users, IndianRupee, Route, CheckCircle, Car } from "lucide-react";
 import { useSocket } from "@/hooks/use-socket";
 
 interface RouteInfo {
@@ -20,7 +20,7 @@ interface RouteInfo {
   path: [number, number][];
 }
 
-export function OfferRideForm({ userId }: { userId?: string }) {
+export function OfferRideForm({ userId, vehicles = [] }: { userId?: string, vehicles?: any[] }) {
   const { socket } = useSocket(userId);
   const [pickup, setPickup] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [dropoff, setDropoff] = useState<{ lat: number; lng: number; address: string } | null>(null);
@@ -34,6 +34,7 @@ export function OfferRideForm({ userId }: { userId?: string }) {
   const [seats, setSeats] = useState("3");
   const [fare, setFare] = useState("");
   const [dateTime, setDateTime] = useState("");
+  const [vehicleId, setVehicleId] = useState("");
 
   const calculateRoute = async () => {
     if (!pickup || !dropoff) return;
@@ -73,6 +74,7 @@ export function OfferRideForm({ userId }: { userId?: string }) {
     if (!pickup || !dropoff || !routeInfo) return;
     if (!dateTime) return toast.error("Please select a departure date & time.");
     if (!fare || Number(fare) <= 0) return toast.error("Please set a valid fare.");
+    if (!vehicleId) return toast.error("Please select a vehicle.");
 
     startTransition(async () => {
       const res = await publishRideAction({
@@ -85,6 +87,7 @@ export function OfferRideForm({ userId }: { userId?: string }) {
         travelDateTime: new Date(dateTime).toISOString(),
         availableSeats: Number(seats),
         farePerSeat: Number(fare),
+        vehicleId: vehicleId,
       });
 
       if (res.success) {
@@ -233,9 +236,28 @@ export function OfferRideForm({ userId }: { userId?: string }) {
                     />
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Car className="h-3.5 w-3.5" /> Vehicle
+                  </Label>
+                  <select 
+                    value={vehicleId} 
+                    onChange={(e) => setVehicleId(e.target.value)}
+                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <option value="">Select a vehicle</option>
+                    {vehicles.map((v) => (
+                      <option key={v.id} value={v.id}>{v.vehicleModel} ({v.registrationNo})</option>
+                    ))}
+                  </select>
+                  {vehicles.length === 0 && (
+                    <p className="text-xs text-destructive mt-1">Please add a vehicle in 'My Vehicles' first.</p>
+                  )}
+                </div>
               </div>
 
-              <Button className="w-full" onClick={handlePublish} disabled={isPending}>
+              <Button className="w-full" onClick={handlePublish} disabled={isPending || vehicles.length === 0}>
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isPending ? "Publishing..." : "Publish Ride"}
               </Button>

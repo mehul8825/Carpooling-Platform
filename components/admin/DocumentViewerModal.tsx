@@ -15,6 +15,31 @@ interface DocumentViewerModalProps {
 export function DocumentViewerModal({ title, src, label }: DocumentViewerModalProps) {
   const [isOpen, setIsOpen] = useState(false);
 
+  const handleOpenNewTab = () => {
+    const newWindow = window.open();
+    if (newWindow) {
+      newWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${title}</title>
+            <style>
+              body { margin: 0; background: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; }
+              img { max-width: 100%; max-height: 100%; object-fit: contain; }
+            </style>
+          </head>
+          <body>
+            <img src="${src}" alt="${title}" />
+          </body>
+        </html>
+      `);
+      newWindow.document.close();
+    } else {
+      // Fallback if popups are blocked
+      setIsOpen(true);
+    }
+  };
+
   // Determine if src is base64
   const isBase64 = src.startsWith("data:");
 
@@ -24,7 +49,7 @@ export function DocumentViewerModal({ title, src, label }: DocumentViewerModalPr
         variant="outline" 
         size="sm" 
         className="h-7 text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200" 
-        onClick={() => setIsOpen(true)}
+        onClick={handleOpenNewTab}
       >
         <FileText className="w-3 h-3 mr-1" /> 
         {label || title}
