@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  role          String         @default("EMPLOYEE") // ADMIN or EMPLOYEE
+  phone         String?        @unique
+  email         String?        @unique
+  name          String?
+  otp           String?
+  otpExpiry     DateTime?
+  driverProfile DriverProfile?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model DriverProfile {
+  id             String         @id @default(cuid())
+  userId         String         @unique
+  user           User           @relation(fields: [userId], references: [id])
+  driverPhoto    String?
+  aadharCard     String?
+  drivingLicence String?
+  vehiclePuc     String?
+  vehicleFront   String?
+  vehicleRear    String?
+  status         String         @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model CompanySettings {
+  id             String   @id @default(cuid())
+  companyName    String   @default("Carpooling Inc")
+  costPerKm      Float    @default(5.0)
+  adminEmail     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
