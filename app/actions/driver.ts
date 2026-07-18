@@ -9,9 +9,14 @@ export async function submitDriverVerificationAction() {
     const user = await getCurrentUserAction();
     if (!user) return { success: false, error: "Not authenticated" };
 
-    // Create a pending DriverProfile
-    await prisma.driverProfile.create({
-      data: {
+    // Upsert a pending DriverProfile
+    await prisma.driverProfile.upsert({
+      where: { userId: user.id },
+      update: {
+        status: "PENDING",
+        rejectionReason: null,
+      },
+      create: {
         userId: user.id,
         status: "PENDING",
       }

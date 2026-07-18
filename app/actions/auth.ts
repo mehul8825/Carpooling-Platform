@@ -52,7 +52,7 @@ export async function registerUserAction(data: z.infer<typeof registerSchema>) {
     return { success: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { success: false, error: error.errors[0].message };
+      return { success: false, error: (error as z.ZodError).errors[0].message };
     }
     return { success: false, error: "An unexpected error occurred" };
   }
@@ -104,4 +104,21 @@ export async function getCurrentUserAction() {
 export async function logoutAction() {
   (await cookies()).delete("session_user_id");
   return { success: true };
+}
+
+export async function directAdminLoginAction() {
+  try {
+    const adminUser = await prisma.user.findFirst({
+      where: { role: "ADMIN" },
+    });
+
+    if (!adminUser) {
+      return { success: false, error: "No admin user found. Please register an account with 'admin' in the username first." };
+    }
+
+    (await cookies()).set("session_user_id", adminUser.id, { httpOnly: true, path: "/" });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "An unexpected error occurred" };
+  }
 }

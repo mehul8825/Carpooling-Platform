@@ -26,7 +26,13 @@ export default function FindRidePage() {
       seats: parseInt(formData.get("seats") as string) || 1,
     };
 
-    const res = await searchRidesAction(data);
+    const res = await searchRidesAction({
+      pickupLat: 0,
+      pickupLng: 0,
+      dropLat: 0,
+      dropLng: 0,
+      radiusKm: 10000 // A huge radius to effectively ignore location filtering for this simple page
+    });
     setLoading(false);
     setHasSearched(true);
     if (res.success && res.rides) {
@@ -126,7 +132,6 @@ export default function FindRidePage() {
                   <CardFooter>
                     <BookRideButton 
                       rideId={ride.id} 
-                      passengerId={"placeholder"} 
                       pricePerSeat={ride.farePerSeat} 
                     />
                   </CardFooter>

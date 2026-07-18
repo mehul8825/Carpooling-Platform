@@ -40,7 +40,6 @@ export async function publishRideAction(data: {
       });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new Error("User not found");
 
     const ride = await prisma.ride.create({
@@ -63,6 +62,21 @@ export async function publishRideAction(data: {
     revalidatePath("/");
     revalidatePath("/find-ride");
     
+    // Notify all other employees about the new ride
+    const otherUsers = await prisma.user.findMany({
+      where: { id: { not: user.id } },
+      select: { id: true }
+    });
+
+    if (otherUsers.length > 0) {
+      const notifications = otherUsers.map(u => ({
+        userId: u.id,
+        title: "New Ride Available",
+        message: `${user.name} just published a ride going to ${data.dropLocation}.`,
+      }));
+      await prisma.notification.createMany({ data: notifications });
+    }
+
     const broadcastRide = {
       ...ride,
       driver: { id: user.id, name: user.name, email: user.email },
@@ -175,12 +189,7 @@ export async function requestBookingAction(data: {
         rideId: data.rideId,
         passengerId: userId,
         status: { in: ["REQUESTED", "APPROVED"] },
-      },
-      include: {
-        driver: { select: { name: true, username: true } },
-        vehicle: true
-      },
-      orderBy: { travelDateTime: "asc" }
+      }
     });
 
     if (existingBooking) return { success: false, error: "You already have a booking on this ride" };
@@ -195,6 +204,15 @@ export async function requestBookingAction(data: {
       },
       include: {
         passenger: { select: { id: true, name: true, email: true } }
+      }
+    });
+
+    // Notify the driver
+    await prisma.notification.create({
+      data: {
+        userId: ride.driverId,
+        title: "New Seat Request",
+        message: `${user?.name || "Someone"} requested ${data.seatsBooked} seat(s) on your ride to ${ride.dropLocation}.`
       }
     });
 
@@ -238,6 +256,26 @@ export async function approveBookingAction(bookingId: string) {
         data: { availableSeats: { decrement: booking.seatsBooked } },
       }),
     ]);
+    
+    // Automatically reject any other pending requests from this same passenger for this ride
+    await prisma.rideBooking.updateMany({
+      where: {
+        rideId: booking.rideId,
+        passengerId: booking.passengerId,
+        status: "REQUESTED",
+        id: { not: bookingId }
+      },
+      data: { status: "REJECTED" }
+    });
+
+    // Notify passenger
+    await prisma.notification.create({
+      data: {
+        userId: booking.passengerId,
+        title: "Booking Accepted",
+        message: `${user?.name || "Driver"} accepted your seat request for the ride to ${booking.ride.dropLocation}.`
+      }
+    });
 
     revalidatePath("/offer-ride");
     return { success: true };
@@ -267,6 +305,25 @@ export async function rejectBookingAction(bookingId: string) {
       data: { status: "REJECTED" },
     });
 
+    // Update booking status for THIS and ALL other duplicate requests from the same user for this ride
+    await prisma.rideBooking.updateMany({
+      where: { 
+        rideId: booking.rideId,
+        passengerId: booking.passengerId,
+        status: "REQUESTED"
+      },
+      data: { status: "REJECTED" }
+    });
+
+    // Notify passenger
+    await prisma.notification.create({
+      data: {
+        userId: booking.passengerId,
+        title: "Booking Rejected",
+        message: `${user?.name || "Driver"} rejected your seat request for the ride to ${booking.ride.dropLocation}.`
+      }
+    });
+
     revalidatePath("/offer-ride");
     return { success: true };
   } catch (error: any) {
@@ -281,7 +338,8 @@ export async function rejectBookingAction(bookingId: string) {
 
 export async function getMyRidesAction() {
   try {
-    const userId = await verifySession();
+    const user = await getCurrentUserAction();
+    const userId = user?.id;
     if (!userId) return { success: false, rides: [] };
 
     const rides = await prisma.ride.findMany({

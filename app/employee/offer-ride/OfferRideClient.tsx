@@ -13,12 +13,13 @@ import { useRouter } from "next/navigation";
 import { BackButton } from "@/components/ui/BackButton";
 
 interface OfferRideClientProps {
-  initialStatus: "NEW" | "PENDING" | "APPROVED";
+  initialStatus: "NEW" | "PENDING" | "APPROVED" | "REJECTED";
   vehicles: any[];
+  initialRejectionReason?: string | null;
 }
 
-export function OfferRideClient({ initialStatus, vehicles }: OfferRideClientProps) {
-  const [driverStatus, setDriverStatus] = useState<"NEW" | "PENDING" | "APPROVED">(initialStatus);
+export function OfferRideClient({ initialStatus, vehicles, initialRejectionReason }: OfferRideClientProps) {
+  const [driverStatus, setDriverStatus] = useState<"NEW" | "PENDING" | "APPROVED" | "REJECTED">(initialStatus);
   const router = useRouter();
 
   const handleDocumentSubmit = async (e: React.FormEvent) => {
@@ -48,7 +49,17 @@ export function OfferRideClient({ initialStatus, vehicles }: OfferRideClientProp
       return toast.error("Please select a vehicle");
     }
 
-    const res = await publishRideAction(data);
+    const res = await publishRideAction({
+      pickupLocation: data.from,
+      pickupLat: 0,
+      pickupLng: 0,
+      dropLocation: data.to,
+      dropLat: 0,
+      dropLng: 0,
+      travelDateTime: data.date,
+      availableSeats: data.seats,
+      farePerSeat: data.fare,
+    });
     if (res.success) {
       toast.success("Ride published successfully!");
       router.push("/employee");
@@ -66,21 +77,38 @@ export function OfferRideClient({ initialStatus, vehicles }: OfferRideClientProp
     }
   };
 
-  if (driverStatus === "NEW") {
+  if (driverStatus === "NEW" || driverStatus === "REJECTED") {
     return (
       <div className="max-w-3xl mx-auto space-y-6">
         <BackButton title="Back to Dashboard" />
-        <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-lg flex gap-3">
-          <ShieldCheck className="w-6 h-6 shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-bold">First-Time Driver Verification</h3>
-            <p className="text-sm mt-1">To ensure the safety of our corporate community, we require verification documents before you can offer a ride.</p>
+        
+        {driverStatus === "REJECTED" && (
+          <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg flex gap-3">
+            <AlertCircle className="w-6 h-6 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-bold">Application Rejected</h3>
+              <p className="text-sm mt-1">
+                Your previous application was rejected for the following reason:<br/>
+                <span className="font-medium text-red-900 mt-2 block p-2 bg-white rounded border border-red-100">"{initialRejectionReason}"</span>
+              </p>
+              <p className="text-xs mt-3">Please upload corrected documents below to re-submit.</p>
+            </div>
           </div>
-        </div>
+        )}
+
+        {driverStatus === "NEW" && (
+          <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-lg flex gap-3">
+            <ShieldCheck className="w-6 h-6 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-bold">First-Time Driver Verification</h3>
+              <p className="text-sm mt-1">To ensure the safety of our corporate community, we require verification documents before you can offer a ride.</p>
+            </div>
+          </div>
+        )}
 
         <Card>
           <CardHeader>
-            <CardTitle>Submit Verification Documents</CardTitle>
+            <CardTitle>{driverStatus === "REJECTED" ? "Re-submit Verification Documents" : "Submit Verification Documents"}</CardTitle>
             <CardDescription>Please provide clear photos or scans of the following.</CardDescription>
           </CardHeader>
           <CardContent>
