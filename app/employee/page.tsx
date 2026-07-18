@@ -139,7 +139,7 @@ export default async function EmployeeDashboardOverview() {
               <div className="text-center py-8 text-gray-500">
                 <Navigation className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                 <p>No upcoming trips scheduled.</p>
-                <Link href="/employee/find-ride">
+                <Link href="/find-ride">
                   <Button variant="link" className="mt-2 text-blue-600">Find a ride now</Button>
                 </Link>
               </div>
@@ -151,7 +151,12 @@ export default async function EmployeeDashboardOverview() {
                       <p className="font-semibold text-sm">To: {ride.dropLocation}</p>
                       <p className="text-xs text-gray-500">{new Date(ride.travelDateTime).toLocaleDateString()}</p>
                     </div>
-                    <span className="text-xs font-semibold px-2 py-1 bg-green-100 text-green-700 rounded-full">Driver</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold px-2 py-1 bg-green-100 text-green-700 rounded-full">Driver</span>
+                      <Link href={`/ride/${ride.id}`}>
+                        <Button size="sm" variant="outline" className="h-7 text-xs px-2">Track</Button>
+                      </Link>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -164,12 +169,12 @@ export default async function EmployeeDashboardOverview() {
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Link href="/employee/find-ride" className="block">
+            <Link href="/find-ride" className="block">
               <Button className="w-full justify-start h-12 text-md">
                 <Search className="mr-3 w-5 h-5" /> Find a Ride Now
               </Button>
             </Link>
-            <Link href="/employee/offer-ride" className="block">
+            <Link href="/offer-ride" className="block">
               <Button variant="outline" className="w-full justify-start h-12 text-md">
                 <Car className="mr-3 w-5 h-5" /> Publish a New Ride
               </Button>

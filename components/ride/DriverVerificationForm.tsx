@@ -10,21 +10,14 @@ import { toast } from "sonner";
 import { submitDriverVerificationAction, simulateAdminApprovalAction } from "@/app/actions/driver";
 import { useRouter } from "next/navigation";
 import { BackButton } from "@/components/ui/BackButton";
-import { OfferRideForm } from "@/components/ride/OfferRideForm";
 
 interface DriverVerificationFormProps {
   initialStatus: "NEW" | "PENDING" | "REJECTED";
   initialRejectionReason?: string | null;
-  userId?: string;
 }
 
-<<<<<<< HEAD:app/employee/offer-ride/OfferRideClient.tsx
-export function OfferRideClient({ initialStatus, vehicles, initialRejectionReason, userId }: OfferRideClientProps) {
-  const [driverStatus, setDriverStatus] = useState<"NEW" | "PENDING" | "APPROVED" | "REJECTED">(initialStatus);
-=======
 export function DriverVerificationForm({ initialStatus, initialRejectionReason }: DriverVerificationFormProps) {
   const [driverStatus, setDriverStatus] = useState<"NEW" | "PENDING" | "REJECTED">(initialStatus);
->>>>>>> 8142f34c4c40a7611cbc1dbbf9d19d6218bb3e1c:components/ride/DriverVerificationForm.tsx
   const router = useRouter();
 
   const [isSubmittingDocs, setIsSubmittingDocs] = useState(false);
@@ -74,45 +67,6 @@ export function DriverVerificationForm({ initialStatus, initialRejectionReason }
     }
   };
 
-<<<<<<< HEAD:app/employee/offer-ride/OfferRideClient.tsx
-  const handlePublishRide = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const data = {
-      from: formData.get("from") as string,
-      to: formData.get("to") as string,
-      date: formData.get("date") as string,
-      seats: parseInt(formData.get("seats") as string),
-      fare: parseFloat(formData.get("fare") as string),
-      vehicleId: formData.get("vehicleId") as string,
-    };
-    
-    if (!data.vehicleId) {
-      return toast.error("Please select a vehicle");
-    }
-
-    const res = await publishRideAction({
-      pickupLocation: data.from,
-      pickupLat: 0,
-      pickupLng: 0,
-      dropLocation: data.to,
-      dropLat: 0,
-      dropLng: 0,
-      travelDateTime: data.date,
-      availableSeats: data.seats,
-      farePerSeat: data.fare,
-      vehicleId: data.vehicleId,
-    });
-    if (res.success) {
-      toast.success("Ride published successfully!");
-      router.push("/employee");
-    } else {
-      toast.error(res.error);
-    }
-  };
-
-=======
->>>>>>> 8142f34c4c40a7611cbc1dbbf9d19d6218bb3e1c:components/ride/DriverVerificationForm.tsx
   const handleSimulate = async () => {
     const res = await simulateAdminApprovalAction();
     if (res.success) {
@@ -214,13 +168,5 @@ export function DriverVerificationForm({ initialStatus, initialRejectionReason }
     );
   }
 
-<<<<<<< HEAD:app/employee/offer-ride/OfferRideClient.tsx
-  return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <OfferRideForm userId={userId} vehicles={vehicles} />
-    </div>
-  );
-=======
   return null;
->>>>>>> 8142f34c4c40a7611cbc1dbbf9d19d6218bb3e1c:components/ride/DriverVerificationForm.tsx
 }

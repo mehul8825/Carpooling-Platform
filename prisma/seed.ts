@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -19,13 +20,29 @@ async function main() {
   console.log(`Created Company Settings with id: ${companySettings.id}`)
 
   // 2. Create an initial ADMIN user
+  // (We use a fixed password 'admin123' for seed data)
+  const hashedPassword = await bcrypt.hash('admin123', 10);
+  
+  // Clean up any existing admin user to prevent unique constraint conflicts on email/phone/username
+  await prisma.user.deleteMany({
+    where: {
+      OR: [
+        { email: 'admin@hackathoncorp.com' },
+        { username: 'admin' },
+        { phone: '1234567890' }
+      ]
+    }
+  });
+  
   const admin = await prisma.user.upsert({
     where: { email: 'admin@hackathoncorp.com' },
     update: {},
     create: {
-      email: 'gywaquba@denipl.com',
+      email: 'admin@hackathoncorp.com',
+      username: 'admin',
       name: 'System Admin',
       phone: '1234567890',
+      password: hashedPassword,
       role: 'ADMIN',
     },
   })

@@ -18,19 +18,26 @@ export async function publishRideAction(data: {
   travelDateTime: string; // ISO string from client
   availableSeats: number;
   farePerSeat: number;
-  vehicleId: string;
 }) {
   try {
     const user = await getCurrentUserAction();
     const userId = user?.id;
     if (!userId) return { success: false, error: "Not authenticated" };
 
-    const vehicle = await prisma.vehicle.findUnique({
-      where: { id: data.vehicleId },
+    // Ensure user has a vehicle (auto-create for hackathon demo)
+    let vehicle = await prisma.vehicle.findFirst({
+      where: { driverId: userId },
     });
 
-    if (!vehicle || vehicle.driverId !== userId) {
-      return { success: false, error: "Invalid vehicle selected" };
+    if (!vehicle) {
+      vehicle = await prisma.vehicle.create({
+        data: {
+          driverId: userId,
+          vehicleModel: "My Car",
+          registrationNo: "DEMO-0000",
+          seatingCapacity: 4,
+        },
+      });
     }
 
     if (!user) throw new Error("User not found");
@@ -251,7 +258,10 @@ export async function approveBookingAction(bookingId: string) {
       }),
       prisma.ride.update({
         where: { id: booking.rideId },
-        data: { availableSeats: { decrement: booking.seatsBooked } },
+        data: { 
+          availableSeats: { decrement: booking.seatsBooked },
+          status: "ONGOING"
+        },
       }),
     ]);
     
@@ -360,5 +370,35 @@ export async function getMyRidesAction() {
   } catch (error: any) {
     console.error("Failed to get my rides:", error);
     return { success: false, rides: [] };
+  }
+}
+
+// ─────────────────────────────────────────────
+// PASSENGER DASHBOARD: Get bookings I've requested
+// ─────────────────────────────────────────────
+
+export async function getMyBookingsAction() {
+  try {
+    const user = await getCurrentUserAction();
+    const userId = user?.id;
+    if (!userId) return { success: false, bookings: [] };
+
+    const bookings = await prisma.rideBooking.findMany({
+      where: { passengerId: userId },
+      include: {
+        ride: {
+          include: {
+            driver: { select: { id: true, name: true, phone: true } },
+            vehicle: true,
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return { success: true, bookings };
+  } catch (error: any) {
+    console.error("Failed to get my bookings:", error);
+    return { success: false, bookings: [] };
   }
 }

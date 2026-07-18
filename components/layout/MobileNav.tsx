@@ -38,11 +38,11 @@ export function MobileNav({ user }: MobileNavProps) {
         </SheetHeader>
 
         <div className="flex flex-col gap-1 mt-6">
-          <Button variant="ghost" className="justify-start gap-3" onClick={() => navigate("/employee/find-ride")}>
+          <Button variant="ghost" className="justify-start gap-3" onClick={() => navigate("/find-ride")}>
             <Search className="h-4 w-4" />
             Find Ride
           </Button>
-          <Button variant="ghost" className="justify-start gap-3" onClick={() => navigate("/employee/offer-ride")}>
+          <Button variant="ghost" className="justify-start gap-3" onClick={() => navigate("/offer-ride")}>
             <PlusCircle className="h-4 w-4" />
             Offer Ride
           </Button>

@@ -50,6 +50,7 @@ export function FindRideForm({ userId }: { userId?: string }) {
   const [pickup, setPickup] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [dropoff, setDropoff] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [rides, setRides] = useState<MatchedRide[]>([]);
+  const [mapSelectionMode, setMapSelectionMode] = useState<"pickup" | "dropoff" | null>(null);
   const [searched, setSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [bookingPending, setBookingPending] = useState<string | null>(null);
@@ -58,6 +59,9 @@ export function FindRideForm({ userId }: { userId?: string }) {
   // Listen for real-time new rides
   useEffect(() => {
     if (!socket || !searched || !pickup || !dropoff) return;
+
+    // Join the geo-room based on pickup location to get relevant rides
+    socket.emit("join_geo_room", { lat: pickup.lat, lng: pickup.lng });
 
     const handleNewRide = (ride: any) => {
       const pickupDist = haversineKm(pickup.lat, pickup.lng, ride.pickupLat, ride.pickupLng);
@@ -138,6 +142,27 @@ export function FindRideForm({ userId }: { userId?: string }) {
     });
   };
 
+  const handleMapClick = async (lat: number, lng: number) => {
+    if (!mapSelectionMode) return;
+    
+    // Reverse geocode
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+      const data = await res.json();
+      if (data && data.display_name) {
+        if (mapSelectionMode === "pickup") {
+          setPickup({ lat, lng, address: data.display_name });
+        } else {
+          setDropoff({ lat, lng, address: data.display_name });
+        }
+        setMapSelectionMode(null);
+        toast.success(`Location set from map!`);
+      }
+    } catch (error) {
+      toast.error("Failed to get address for that location");
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
       {/* Left panel – search + results */}
@@ -154,20 +179,44 @@ export function FindRideForm({ userId }: { userId?: string }) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <MapPin className="h-3.5 w-3.5 text-emerald-600" /> Your Pickup
-              </Label>
+              <div className="flex justify-between items-center">
+                <Label className="flex items-center gap-2">
+                  <MapPin className="h-3.5 w-3.5 text-emerald-600" /> Your Pickup
+                </Label>
+                <Button 
+                  type="button" 
+                  variant={mapSelectionMode === "pickup" ? "default" : "outline"} 
+                  size="sm" 
+                  className="h-6 text-xs px-2"
+                  onClick={() => setMapSelectionMode(mapSelectionMode === "pickup" ? null : "pickup")}
+                >
+                  {mapSelectionMode === "pickup" ? "Click on map..." : "Pin on Map"}
+                </Button>
+              </div>
               <LocationSearch
                 placeholder="Where are you starting?"
+                defaultValue={pickup?.address || ""}
                 onSelect={(lat, lng, addr) => { setPickup({ lat, lng, address: addr }); setSearched(false); }}
               />
             </div>
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <MapPin className="h-3.5 w-3.5 text-blue-600" /> Your Destination
-              </Label>
+              <div className="flex justify-between items-center">
+                <Label className="flex items-center gap-2">
+                  <MapPin className="h-3.5 w-3.5 text-blue-600" /> Your Destination
+                </Label>
+                <Button 
+                  type="button" 
+                  variant={mapSelectionMode === "dropoff" ? "default" : "outline"} 
+                  size="sm" 
+                  className="h-6 text-xs px-2"
+                  onClick={() => setMapSelectionMode(mapSelectionMode === "dropoff" ? null : "dropoff")}
+                >
+                  {mapSelectionMode === "dropoff" ? "Click on map..." : "Pin on Map"}
+                </Button>
+              </div>
               <LocationSearch
                 placeholder="Where do you want to go?"
+                defaultValue={dropoff?.address || ""}
                 onSelect={(lat, lng, addr) => { setDropoff({ lat, lng, address: addr }); setSearched(false); }}
               />
             </div>
@@ -279,6 +328,8 @@ export function FindRideForm({ userId }: { userId?: string }) {
             pickupLng={pickup?.lng}
             dropLat={dropoff?.lat}
             dropLng={dropoff?.lng}
+            onMapClick={handleMapClick}
+            isSelectingLocation={!!mapSelectionMode}
           />
         </Card>
       </div>

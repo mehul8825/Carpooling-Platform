@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { publishRideAction } from "@/app/actions/ride";
 import { toast } from "sonner";
-import { Loader2, MapPin, Clock, Users, IndianRupee, Route, CheckCircle, Car } from "lucide-react";
+import { Loader2, MapPin, Clock, Users, IndianRupee, Route, CheckCircle } from "lucide-react";
 import { useSocket } from "@/hooks/use-socket";
 
 interface RouteInfo {
@@ -20,10 +20,11 @@ interface RouteInfo {
   path: [number, number][];
 }
 
-export function OfferRideForm({ userId, vehicles = [] }: { userId?: string, vehicles?: any[] }) {
+export function OfferRideForm({ userId }: { userId?: string }) {
   const { socket } = useSocket(userId);
   const [pickup, setPickup] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [dropoff, setDropoff] = useState<{ lat: number; lng: number; address: string } | null>(null);
+  const [mapSelectionMode, setMapSelectionMode] = useState<"pickup" | "dropoff" | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +35,6 @@ export function OfferRideForm({ userId, vehicles = [] }: { userId?: string, vehi
   const [seats, setSeats] = useState("3");
   const [fare, setFare] = useState("");
   const [dateTime, setDateTime] = useState("");
-  const [vehicleId, setVehicleId] = useState("");
 
   const calculateRoute = async () => {
     if (!pickup || !dropoff) return;
@@ -74,7 +74,6 @@ export function OfferRideForm({ userId, vehicles = [] }: { userId?: string, vehi
     if (!pickup || !dropoff || !routeInfo) return;
     if (!dateTime) return toast.error("Please select a departure date & time.");
     if (!fare || Number(fare) <= 0) return toast.error("Please set a valid fare.");
-    if (!vehicleId) return toast.error("Please select a vehicle.");
 
     startTransition(async () => {
       const res = await publishRideAction({
@@ -87,7 +86,6 @@ export function OfferRideForm({ userId, vehicles = [] }: { userId?: string, vehi
         travelDateTime: new Date(dateTime).toISOString(),
         availableSeats: Number(seats),
         farePerSeat: Number(fare),
-        vehicleId: vehicleId,
       });
 
       if (res.success) {
@@ -100,6 +98,28 @@ export function OfferRideForm({ userId, vehicles = [] }: { userId?: string, vehi
         toast.error(res.error || "Failed to publish ride.");
       }
     });
+  };
+
+  const handleMapClick = async (lat: number, lng: number) => {
+    if (!mapSelectionMode) return;
+    
+    // Reverse geocode
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+      const data = await res.json();
+      if (data && data.display_name) {
+        if (mapSelectionMode === "pickup") {
+          setPickup({ lat, lng, address: data.display_name });
+        } else {
+          setDropoff({ lat, lng, address: data.display_name });
+        }
+        setRouteInfo(null);
+        setMapSelectionMode(null);
+        toast.success(`Location set from map!`);
+      }
+    } catch (error) {
+      toast.error("Failed to get address for that location");
+    }
   };
 
   if (published) {
@@ -138,20 +158,44 @@ export function OfferRideForm({ userId, vehicles = [] }: { userId?: string, vehi
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <MapPin className="h-3.5 w-3.5 text-emerald-600" /> Pickup
-              </Label>
+              <div className="flex justify-between items-center">
+                <Label className="flex items-center gap-2">
+                  <MapPin className="h-3.5 w-3.5 text-emerald-600" /> Pickup
+                </Label>
+                <Button 
+                  type="button" 
+                  variant={mapSelectionMode === "pickup" ? "default" : "outline"} 
+                  size="sm" 
+                  className="h-6 text-xs px-2"
+                  onClick={() => setMapSelectionMode(mapSelectionMode === "pickup" ? null : "pickup")}
+                >
+                  {mapSelectionMode === "pickup" ? "Click on map..." : "Pin on Map"}
+                </Button>
+              </div>
               <LocationSearch
                 placeholder="Start location..."
+                defaultValue={pickup?.address || ""}
                 onSelect={(lat, lng, addr) => { setPickup({ lat, lng, address: addr }); setRouteInfo(null); }}
               />
             </div>
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <MapPin className="h-3.5 w-3.5 text-blue-600" /> Drop-off
-              </Label>
+              <div className="flex justify-between items-center">
+                <Label className="flex items-center gap-2">
+                  <MapPin className="h-3.5 w-3.5 text-blue-600" /> Drop-off
+                </Label>
+                <Button 
+                  type="button" 
+                  variant={mapSelectionMode === "dropoff" ? "default" : "outline"} 
+                  size="sm" 
+                  className="h-6 text-xs px-2"
+                  onClick={() => setMapSelectionMode(mapSelectionMode === "dropoff" ? null : "dropoff")}
+                >
+                  {mapSelectionMode === "dropoff" ? "Click on map..." : "Pin on Map"}
+                </Button>
+              </div>
               <LocationSearch
                 placeholder="Destination..."
+                defaultValue={dropoff?.address || ""}
                 onSelect={(lat, lng, addr) => { setDropoff({ lat, lng, address: addr }); setRouteInfo(null); }}
               />
             </div>
@@ -236,28 +280,9 @@ export function OfferRideForm({ userId, vehicles = [] }: { userId?: string, vehi
                     />
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Car className="h-3.5 w-3.5" /> Vehicle
-                  </Label>
-                  <select 
-                    value={vehicleId} 
-                    onChange={(e) => setVehicleId(e.target.value)}
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  >
-                    <option value="">Select a vehicle</option>
-                    {vehicles.map((v) => (
-                      <option key={v.id} value={v.id}>{v.vehicleModel} ({v.registrationNo})</option>
-                    ))}
-                  </select>
-                  {vehicles.length === 0 && (
-                    <p className="text-xs text-destructive mt-1">Please add a vehicle in 'My Vehicles' first.</p>
-                  )}
-                </div>
               </div>
 
-              <Button className="w-full" onClick={handlePublish} disabled={isPending || vehicles.length === 0}>
+              <Button className="w-full" onClick={handlePublish} disabled={isPending}>
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isPending ? "Publishing..." : "Publish Ride"}
               </Button>
@@ -275,6 +300,8 @@ export function OfferRideForm({ userId, vehicles = [] }: { userId?: string, vehi
             dropLat={dropoff?.lat}
             dropLng={dropoff?.lng}
             routePath={routeInfo?.path}
+            onMapClick={handleMapClick}
+            isSelectingLocation={!!mapSelectionMode}
           />
         </Card>
       </div>
