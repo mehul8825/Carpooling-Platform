@@ -46,13 +46,13 @@ export default async function Page() {
               </>
             ) : (
               <>
-                <Link href="/employee/find-ride">
+                <Link href="/find-ride">
                   <Button size="lg" className="gap-2 px-6 w-full sm:w-auto">
                     <Search className="h-4 w-4" />
                     Find a Ride
                   </Button>
                 </Link>
-                <Link href="/employee/offer-ride">
+                <Link href="/offer-ride">
                   <Button size="lg" variant="outline" className="gap-2 px-6 w-full sm:w-auto">
                     <PlusCircle className="h-4 w-4" />
                     Offer a Ride

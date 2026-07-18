@@ -1,7 +1,14 @@
+"use client"
+
 import { prisma } from "@/lib/db";
 import { getCurrentUserAction } from "@/app/actions/auth";
 import { redirect } from "next/navigation";
-import { LiveTrackingClient } from "./LiveTrackingClient";
+import dynamic from "next/dynamic";
+
+const LiveTrackingClient = dynamic(
+  () => import("./LiveTrackingClient").then((mod) => mod.LiveTrackingClient),
+  { ssr: false }
+);
 
 export default async function RideTrackingPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;

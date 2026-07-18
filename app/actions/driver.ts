@@ -41,7 +41,7 @@ export async function submitDriverVerificationAction(data: {
       }
     });
 
-    revalidatePath("/employee/offer-ride");
+    revalidatePath("/offer-ride");
     return { success: true };
   } catch (error) {
     console.error(error);
@@ -70,7 +70,7 @@ export async function simulateAdminApprovalAction() {
       }
     });
 
-    revalidatePath("/employee/offer-ride");
+    revalidatePath("/offer-ride");
     return { success: true };
   } catch (error) {
     console.error(error);
