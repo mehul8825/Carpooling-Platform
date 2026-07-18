@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import { LayoutDashboard, Search, Car, History, Wallet, User, LogOut } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export default function EmployeeLayout({ children }: { children: ReactNode }) {
   return (
@@ -64,6 +65,7 @@ export default function EmployeeLayout({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Balance: <span className="text-green-600 font-bold">$0.00</span></span>
+            <NotificationBell />
           </div>
         </header>
 

@@ -52,7 +52,8 @@ export async function registerUserAction(data: z.infer<typeof registerSchema>) {
     return { success: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { success: false, error: (error as z.ZodError).errors[0].message };
+      // @ts-expect-error - ZodError generic type issue
+      return { success: false, error: error.errors[0].message };
     }
     console.error("Signup error:", error);
     return { success: false, error: "An unexpected error occurred" };
@@ -75,6 +76,14 @@ export async function loginUserAction(username: string, password: string) {
       return { success: false, error: "Invalid username or password" };
     }
 
+    if (user.forcePasswordChange) {
+      return {
+        success: true,
+        forcePasswordChange: true,
+        user: { id: user.id, name: user.name, username: user.username, role: user.role }
+      };
+    }
+
     (await cookies()).set("session_user_id", user.id, { httpOnly: true, path: "/" });
 
     return { 
@@ -85,6 +94,24 @@ export async function loginUserAction(username: string, password: string) {
   } catch (error) {
     console.error("Login error:", error);
     return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function changePasswordAction(userId: string, newPassword: string) {
+  try {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+        forcePasswordChange: false
+      }
+    });
+
+    (await cookies()).set("session_user_id", userId, { httpOnly: true, path: "/" });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to update password" };
   }
 }
 
@@ -121,6 +148,66 @@ export async function directAdminLoginAction() {
     (await cookies()).set("session_user_id", adminUser.id, { httpOnly: true, path: "/" });
     return { success: true };
   } catch (error) {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+import { sendPasswordResetOTPEmail } from "@/lib/mailer";
+
+export async function requestPasswordResetAction(email: string) {
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      // Return success even if user doesn't exist to prevent email enumeration
+      return { success: true }; 
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { otp, otpExpiry }
+    });
+
+    await sendPasswordResetOTPEmail(email, otp);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error requesting password reset:", error);
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function resetPasswordAction(email: string, otp: string, newPassword: string) {
+  try {
+    if (newPassword.length < 6) {
+      return { success: false, error: "Password must be at least 6 characters" };
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || user.otp !== otp) {
+      return { success: false, error: "Invalid OTP" };
+    }
+
+    if (!user.otpExpiry || user.otpExpiry < new Date()) {
+      return { success: false, error: "OTP has expired" };
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        otp: null,
+        otpExpiry: null
+      }
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error resetting password:", error);
     return { success: false, error: "An unexpected error occurred" };
   }
 }

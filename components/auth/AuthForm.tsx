@@ -41,6 +41,11 @@ export function AuthForm({ mode }: AuthFormProps) {
         } else {
           const res = await loginUserAction(username, password);
           if (res.success) {
+            if (res.forcePasswordChange) {
+              toast.info("Please change your temporary password.");
+              router.push(`/auth/change-password?userId=${res.user?.id}`);
+              return;
+            }
             toast.success("Logged in successfully!");
             router.push(res.role === "ADMIN" ? "/admin" : "/employee");
           } else {
@@ -139,9 +144,9 @@ export function AuthForm({ mode }: AuthFormProps) {
                 Password
               </label>
               {mode === "signin" && (
-                <a href="#" onClick={(e) => { e.preventDefault(); toast.info("Forgot password flow coming soon!"); }} className="text-xs text-blue-600 hover:underline">
+                <Link href="/auth/forgot-password" className="text-xs text-blue-600 hover:underline">
                   Forgot password?
-                </a>
+                </Link>
               )}
             </div>
             <Input

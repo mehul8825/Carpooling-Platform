@@ -4,7 +4,14 @@ import { prisma } from "@/lib/db";
 import { getCurrentUserAction } from "./auth";
 import { revalidatePath } from "next/cache";
 
-export async function submitDriverVerificationAction() {
+export async function submitDriverVerificationAction(data: {
+  driverPhoto?: string;
+  aadharCard?: string;
+  drivingLicence?: string;
+  vehiclePuc?: string;
+  vehicleFront?: string;
+  vehicleRear?: string;
+}) {
   try {
     const user = await getCurrentUserAction();
     if (!user) return { success: false, error: "Not authenticated" };
@@ -15,10 +22,22 @@ export async function submitDriverVerificationAction() {
       update: {
         status: "PENDING",
         rejectionReason: null,
+        driverPhoto: data.driverPhoto,
+        aadharCard: data.aadharCard,
+        drivingLicence: data.drivingLicence,
+        vehiclePuc: data.vehiclePuc,
+        vehicleFront: data.vehicleFront,
+        vehicleRear: data.vehicleRear,
       },
       create: {
         userId: user.id,
         status: "PENDING",
+        driverPhoto: data.driverPhoto,
+        aadharCard: data.aadharCard,
+        drivingLicence: data.drivingLicence,
+        vehiclePuc: data.vehiclePuc,
+        vehicleFront: data.vehicleFront,
+        vehicleRear: data.vehicleRear,
       }
     });
 

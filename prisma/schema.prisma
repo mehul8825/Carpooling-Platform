@@ -17,6 +17,7 @@ model User {
   password      String?
   otp           String?
   otpExpiry     DateTime?
+  forcePasswordChange Boolean @default(false)
   driverProfile DriverProfile?
   
   vehicles          Vehicle[]       @relation("UserVehicles")
