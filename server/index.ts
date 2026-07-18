@@ -36,11 +36,28 @@ app.prepare().then(() => {
       socket.join(userId);
       console.log(`Socket ${socket.id} joined personal room ${userId}`);
     });
-    
-    // Broadcast a newly published ride to everyone
+    // User searching for rides joins a geo-based room (approx 11km grid)
+    socket.on('join_geo_room', ({ lat, lng }: { lat: number, lng: number }) => {
+      const geoRoom = `geo:${Math.round(lat * 10) / 10}:${Math.round(lng * 10) / 10}`;
+      socket.join(geoRoom);
+      console.log(`Socket ${socket.id} joined geo room ${geoRoom}`);
+    });
+
+    // Broadcast a newly published ride to the specific geo-room
     socket.on('new_ride_published', (ride: any) => {
-      socket.broadcast.emit('ride_available', ride);
-      console.log('Broadcasted new ride:', ride.id);
+      const geoRoom = `geo:${Math.round(ride.pickupLat * 10) / 10}:${Math.round(ride.pickupLng * 10) / 10}`;
+      socket.to(geoRoom).emit('ride_available', ride);
+      console.log(`Broadcasted new ride ${ride.id} to geo room ${geoRoom}`);
+    });
+
+    // Ride Tracking Rooms
+    socket.on('join_ride_room', (rideId: string) => {
+      socket.join(`ride:${rideId}`);
+      console.log(`Socket ${socket.id} joined ride room ${rideId}`);
+    });
+
+    socket.on('update_ride_location', ({ rideId, lat, lng }: { rideId: string, lat: number, lng: number }) => {
+      socket.to(`ride:${rideId}`).emit('ride_location_updated', { rideId, lat, lng });
     });
 
     // Relay a booking request specifically to the driver

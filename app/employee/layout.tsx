@@ -30,10 +30,10 @@ export default function EmployeeLayout({ children }: { children: ReactNode }) {
           </Link>
 
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-6 px-4">Ride Actions</div>
-          <Link href="/employee/find-ride" className="flex items-center px-4 py-2.5 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+          <Link href="/find-ride" className="flex items-center px-4 py-2.5 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <Search className="w-5 h-5 mr-3" /> Find a Ride
           </Link>
-          <Link href="/employee/offer-ride" className="flex items-center px-4 py-2.5 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+          <Link href="/offer-ride" className="flex items-center px-4 py-2.5 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <Car className="w-5 h-5 mr-3" /> Offer a Ride
           </Link>
 

@@ -24,6 +24,7 @@ export function OfferRideForm({ userId }: { userId?: string }) {
   const { socket } = useSocket(userId);
   const [pickup, setPickup] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [dropoff, setDropoff] = useState<{ lat: number; lng: number; address: string } | null>(null);
+  const [mapSelectionMode, setMapSelectionMode] = useState<"pickup" | "dropoff" | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,6 +100,28 @@ export function OfferRideForm({ userId }: { userId?: string }) {
     });
   };
 
+  const handleMapClick = async (lat: number, lng: number) => {
+    if (!mapSelectionMode) return;
+    
+    // Reverse geocode
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+      const data = await res.json();
+      if (data && data.display_name) {
+        if (mapSelectionMode === "pickup") {
+          setPickup({ lat, lng, address: data.display_name });
+        } else {
+          setDropoff({ lat, lng, address: data.display_name });
+        }
+        setRouteInfo(null);
+        setMapSelectionMode(null);
+        toast.success(`Location set from map!`);
+      }
+    } catch (error) {
+      toast.error("Failed to get address for that location");
+    }
+  };
+
   if (published) {
     return (
       <Card className="max-w-lg mx-auto text-center py-12">
@@ -135,20 +158,44 @@ export function OfferRideForm({ userId }: { userId?: string }) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <MapPin className="h-3.5 w-3.5 text-emerald-600" /> Pickup
-              </Label>
+              <div className="flex justify-between items-center">
+                <Label className="flex items-center gap-2">
+                  <MapPin className="h-3.5 w-3.5 text-emerald-600" /> Pickup
+                </Label>
+                <Button 
+                  type="button" 
+                  variant={mapSelectionMode === "pickup" ? "default" : "outline"} 
+                  size="sm" 
+                  className="h-6 text-xs px-2"
+                  onClick={() => setMapSelectionMode(mapSelectionMode === "pickup" ? null : "pickup")}
+                >
+                  {mapSelectionMode === "pickup" ? "Click on map..." : "Pin on Map"}
+                </Button>
+              </div>
               <LocationSearch
                 placeholder="Start location..."
+                defaultValue={pickup?.address || ""}
                 onSelect={(lat, lng, addr) => { setPickup({ lat, lng, address: addr }); setRouteInfo(null); }}
               />
             </div>
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <MapPin className="h-3.5 w-3.5 text-blue-600" /> Drop-off
-              </Label>
+              <div className="flex justify-between items-center">
+                <Label className="flex items-center gap-2">
+                  <MapPin className="h-3.5 w-3.5 text-blue-600" /> Drop-off
+                </Label>
+                <Button 
+                  type="button" 
+                  variant={mapSelectionMode === "dropoff" ? "default" : "outline"} 
+                  size="sm" 
+                  className="h-6 text-xs px-2"
+                  onClick={() => setMapSelectionMode(mapSelectionMode === "dropoff" ? null : "dropoff")}
+                >
+                  {mapSelectionMode === "dropoff" ? "Click on map..." : "Pin on Map"}
+                </Button>
+              </div>
               <LocationSearch
                 placeholder="Destination..."
+                defaultValue={dropoff?.address || ""}
                 onSelect={(lat, lng, addr) => { setDropoff({ lat, lng, address: addr }); setRouteInfo(null); }}
               />
             </div>
@@ -253,6 +300,8 @@ export function OfferRideForm({ userId }: { userId?: string }) {
             dropLat={dropoff?.lat}
             dropLng={dropoff?.lng}
             routePath={routeInfo?.path}
+            onMapClick={handleMapClick}
+            isSelectingLocation={!!mapSelectionMode}
           />
         </Card>
       </div>

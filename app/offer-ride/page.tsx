@@ -5,9 +5,28 @@ import { getMyRidesAction } from "@/app/actions/ride";
 import { getCurrentUserAction } from "@/app/actions/auth";
 import { PlusCircle, Inbox } from "lucide-react";
 
+import { DriverVerificationForm } from "@/components/ride/DriverVerificationForm";
+import { redirect } from "next/navigation";
+
 export default async function OfferRidePage() {
-  const { rides } = await getMyRidesAction();
   const user = await getCurrentUserAction();
+  if (!user) redirect("/auth/signin");
+
+  const status = user.driverProfile?.status || "NEW";
+  const rejectionReason = user.driverProfile?.rejectionReason;
+
+  if (status !== "APPROVED") {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <DriverVerificationForm 
+          initialStatus={status as "NEW" | "PENDING" | "REJECTED"} 
+          initialRejectionReason={rejectionReason} 
+        />
+      </div>
+    );
+  }
+
+  const { rides } = await getMyRidesAction();
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from "react-leaflet";
+import { Maximize2, Minimize2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
@@ -23,6 +25,17 @@ interface MapProps {
   dropLat?: number;
   dropLng?: number;
   routePath?: [number, number][];
+  onMapClick?: (lat: number, lng: number) => void;
+  isSelectingLocation?: boolean;
+}
+
+function ClickHandler({ onMapClick }: { onMapClick?: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      if (onMapClick) onMapClick(e.latlng.lat, e.latlng.lng);
+    }
+  });
+  return null;
 }
 
 function MapUpdater({ pickupLat, pickupLng, dropLat, dropLng }: MapProps) {
@@ -43,8 +56,9 @@ function MapUpdater({ pickupLat, pickupLng, dropLat, dropLng }: MapProps) {
   return null;
 }
 
-export default function Map({ pickupLat, pickupLng, dropLat, dropLng, routePath }: MapProps) {
+export default function Map({ pickupLat, pickupLng, dropLat, dropLng, routePath, onMapClick, isSelectingLocation }: MapProps) {
   const [mounted, setMounted] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -57,13 +71,38 @@ export default function Map({ pickupLat, pickupLng, dropLat, dropLng, routePath 
   const defaultCenter: [number, number] = [28.6139, 77.2090]; // New Delhi as default
 
   return (
-    <div className="h-[400px] w-full rounded-md overflow-hidden relative z-0">
-      <MapContainer center={defaultCenter} zoom={13} scrollWheelZoom={true} className="h-full w-full">
+    <div className={isFullScreen ? "fixed inset-0 z-50 h-screen w-screen bg-white" : "h-[400px] w-full rounded-md overflow-hidden relative z-0"}>
+      <Button 
+        variant="secondary" 
+        size="icon" 
+        className="absolute top-2 right-2 z-[400] bg-white/90 hover:bg-white shadow-sm"
+        onClick={() => setIsFullScreen(!isFullScreen)}
+      >
+        {isFullScreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+      </Button>
+
+      <style jsx global>{`
+        .leaflet-container.crosshair-cursor-enabled {
+          cursor: crosshair !important;
+        }
+        .leaflet-container.crosshair-cursor-enabled .leaflet-interactive {
+          cursor: crosshair !important;
+        }
+      `}</style>
+
+      <MapContainer 
+        center={defaultCenter} 
+        zoom={13} 
+        scrollWheelZoom={true} 
+        className={`h-full w-full z-0 ${isSelectingLocation ? 'crosshair-cursor-enabled' : ''}`}
+      >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
+        <ClickHandler onMapClick={onMapClick} />
+
         {pickupLat && pickupLng && (
           <Marker position={[pickupLat, pickupLng]} icon={icon}>
             <Popup>Pickup Location</Popup>

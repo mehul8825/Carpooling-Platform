@@ -54,6 +54,7 @@ export async function registerUserAction(data: z.infer<typeof registerSchema>) {
     if (error instanceof z.ZodError) {
       return { success: false, error: (error as z.ZodError).errors[0].message };
     }
+    console.error("Signup error:", error);
     return { success: false, error: "An unexpected error occurred" };
   }
 }
@@ -82,6 +83,7 @@ export async function loginUserAction(username: string, password: string) {
       role: user.role 
     };
   } catch (error) {
+    console.error("Login error:", error);
     return { success: false, error: "An unexpected error occurred" };
   }
 }

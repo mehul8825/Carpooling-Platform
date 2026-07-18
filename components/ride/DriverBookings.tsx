@@ -79,10 +79,18 @@ export function DriverBookings({ rides: initialRides, userId }: { rides: RideWit
       const res = await approveBookingAction(bookingId);
       if (res.success) {
         toast.success("Booking approved!");
-        setRides(prev => prev.map(r => ({
-          ...r,
-          bookings: r.bookings.map(b => b.id === bookingId ? { ...b, status: "APPROVED" } : b)
-        })));
+        setRides(prev => prev.map(r => {
+          if (r.bookings.some(b => b.id === bookingId)) {
+            const booking = r.bookings.find(b => b.id === bookingId);
+            return {
+              ...r,
+              availableSeats: r.availableSeats - (booking?.seatsBooked || 0),
+              status: "ONGOING",
+              bookings: r.bookings.map(b => b.id === bookingId ? { ...b, status: "APPROVED" } : b)
+            };
+          }
+          return r;
+        }));
         if (socket) {
           socket.emit("booking_updated", { passengerId, bookingId, status: "APPROVED" });
         }
@@ -143,9 +151,16 @@ export function DriverBookings({ rides: initialRides, userId }: { rides: RideWit
                   </div>
                 </div>
               </div>
-              <Badge variant={ride.status === "PUBLISHED" ? "default" : "secondary"}>
-                {ride.status}
-              </Badge>
+              <div className="flex flex-col items-end gap-2">
+                <Badge variant={ride.status === "PUBLISHED" ? "default" : "secondary"}>
+                  {ride.status}
+                </Badge>
+                {ride.status === "ONGOING" && (
+                  <Button variant="outline" size="sm" onClick={() => router.push(`/ride/${ride.id}`)}>
+                    Go to Live Tracking
+                  </Button>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
               <span className="flex items-center gap-1">
@@ -189,12 +204,16 @@ export function DriverBookings({ rides: initialRides, userId }: { rides: RideWit
                       </Badge>
                       {booking.status === "REQUESTED" && (
                         <>
+                          {ride.availableSeats < booking.seatsBooked && (
+                            <span className="text-[10px] text-destructive mr-1">Not enough seats</span>
+                          )}
                           <Button
                             size="icon"
                             variant="outline"
                             className="h-7 w-7 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
                             onClick={() => handleApprove(booking.id, booking.passenger.id)}
-                            disabled={isPending}
+                            disabled={isPending || ride.availableSeats < booking.seatsBooked}
+                            title={ride.availableSeats < booking.seatsBooked ? "Not enough seats available" : "Approve"}
                           >
                             {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                           </Button>
