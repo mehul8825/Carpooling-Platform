@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Mail, User, Loader2, ArrowRight, Phone, KeyRound } from "lucide-react";
+import { Mail, User, Loader2, ArrowRight, Phone, KeyRound, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { loginUserAction, registerUserAction } from "@/app/actions/auth";
 
 interface AuthFormProps {
-  mode: "signin" | "signup";
+  mode: "signin" | "signup" | "admin";
 }
 
 export function AuthForm({ mode }: AuthFormProps) {
@@ -167,6 +167,8 @@ export function AuthForm({ mode }: AuthFormProps) {
               </>
             )}
           </Button>
+
+
         </form>
       </CardContent>
 

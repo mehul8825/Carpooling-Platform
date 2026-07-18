@@ -9,14 +9,17 @@ export default async function OfferRidePage() {
   }
 
   let status = "NEW";
+  let rejectionReason: string | null = null;
   if (user.driverProfile) {
     status = user.driverProfile.status;
+    rejectionReason = user.driverProfile.rejectionReason;
   }
 
   return (
     <OfferRideClient 
-      initialStatus={status as "NEW" | "PENDING" | "APPROVED"} 
+      initialStatus={status as "NEW" | "PENDING" | "APPROVED" | "REJECTED"} 
       vehicles={user.vehicles || []}
+      initialRejectionReason={rejectionReason}
     />
   );
 }

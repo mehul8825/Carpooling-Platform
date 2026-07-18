@@ -1,10 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Car, Map, AlertTriangle, CheckCircle, XCircle, FileText } from "lucide-react";
+import { Users, Car, Map, AlertTriangle, CheckCircle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { getCurrentUserAction } from "@/app/actions/auth";
 import { redirect } from "next/navigation";
-import { approveDriverAction, rejectDriverAction } from "@/app/actions/admin";
+import { approveDriverAction } from "@/app/actions/admin";
+import { RejectDriverButton } from "@/components/admin/RejectDriverButton";
 
 export default async function AdminDashboardOverview() {
   const admin = await getCurrentUserAction();
@@ -116,18 +117,20 @@ export default async function AdminDashboardOverview() {
                         <h4 className="font-semibold text-slate-800">{profile.user.name} (@{profile.user.username})</h4>
                         <p className="text-sm text-slate-500 mt-1">Requested: {new Date(profile.createdAt).toLocaleString()}</p>
                         <div className="flex gap-2 mt-2">
-                          <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded-md border border-blue-100"><FileText className="w-3 h-3"/> Licence</span>
-                          <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded-md border border-blue-100"><FileText className="w-3 h-3"/> Aadhar</span>
-                          <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded-md border border-blue-100"><FileText className="w-3 h-3"/> Vehicle</span>
+                          <a href="https://placehold.co/600x400/EEE/31343C?font=montserrat&text=Licence+Document" target="_blank" className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md border border-blue-200 transition-colors">
+                            <FileText className="w-3 h-3"/> View Licence
+                          </a>
+                          <a href="https://placehold.co/600x400/EEE/31343C?font=montserrat&text=Aadhar+Card" target="_blank" className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md border border-blue-200 transition-colors">
+                            <FileText className="w-3 h-3"/> View Aadhar
+                          </a>
+                          <a href="https://placehold.co/600x400/EEE/31343C?font=montserrat&text=Vehicle+Photos" target="_blank" className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md border border-blue-200 transition-colors">
+                            <FileText className="w-3 h-3"/> View Vehicle
+                          </a>
                         </div>
                       </div>
                       
                       <div className="flex gap-2 shrink-0">
-                        <form action={rejectDriverAction.bind(null, profile.userId)}>
-                          <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" size="sm">
-                            <XCircle className="w-4 h-4 mr-1" /> Reject
-                          </Button>
-                        </form>
+                        <RejectDriverButton userId={profile.userId} />
                         <form action={approveDriverAction.bind(null, profile.userId)}>
                           <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" size="sm">
                             <CheckCircle className="w-4 h-4 mr-1" /> Approve

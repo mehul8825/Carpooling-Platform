@@ -36,15 +36,18 @@ export async function approveDriverAction(userId: string) {
   }
 }
 
-export async function rejectDriverAction(userId: string) {
+export async function rejectDriverAction(userId: string, reason: string) {
   try {
     const admin = await getCurrentUserAction();
     if (!admin || admin.role !== "ADMIN") return { success: false, error: "Unauthorized" };
 
-    // Update status to REJECTED
+    // Update status to REJECTED and set reason
     await prisma.driverProfile.update({
       where: { userId: userId },
-      data: { status: "REJECTED" }
+      data: { 
+        status: "REJECTED",
+        rejectionReason: reason 
+      }
     });
 
     revalidatePath("/admin");

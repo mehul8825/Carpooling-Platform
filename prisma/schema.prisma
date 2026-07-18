@@ -23,6 +23,7 @@ model User {
   driverRides       Ride[]          @relation("DriverRides")
   passengerBookings RideBooking[]   @relation("PassengerBookings")
   savedLocations    SavedLocation[] @relation("UserLocations")
+  notifications     Notification[]
 
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -39,6 +40,7 @@ model DriverProfile {
   vehicleFront   String?
   vehicleRear    String?
   status         String         @default("PENDING") // PENDING, APPROVED, REJECTED
+  rejectionReason String?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 }
@@ -113,4 +115,14 @@ model SavedLocation {
   address     String
   lat         Float
   lng         Float
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 }

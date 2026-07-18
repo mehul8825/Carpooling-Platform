@@ -105,3 +105,20 @@ export async function logoutAction() {
   (await cookies()).delete("session_user_id");
   return { success: true };
 }
+
+export async function directAdminLoginAction() {
+  try {
+    const adminUser = await prisma.user.findFirst({
+      where: { role: "ADMIN" },
+    });
+
+    if (!adminUser) {
+      return { success: false, error: "No admin user found. Please register an account with 'admin' in the username first." };
+    }
+
+    (await cookies()).set("session_user_id", adminUser.id, { httpOnly: true, path: "/" });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}

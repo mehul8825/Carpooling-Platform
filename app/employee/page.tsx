@@ -18,6 +18,31 @@ export default async function EmployeeDashboardOverview() {
   const allRides = await prisma.ride.findMany({ where: { driverId: user.id } });
   const totalEarnings = allRides.reduce((acc, ride) => acc + (ride.farePerSeat * (6 - ride.availableSeats)), 0);
 
+  // Fetch pending booking requests for this driver
+  const pendingRequests = await prisma.rideBooking.findMany({
+    where: {
+      ride: { driverId: user.id },
+      status: "REQUESTED"
+    },
+    include: {
+      passenger: true,
+      ride: true
+    }
+  });
+
+  // Server actions for forms
+  const acceptAction = async (formData: FormData) => {
+    "use server";
+    const { acceptBookingAction } = await import("@/app/actions/ride");
+    await acceptBookingAction(formData.get("bookingId") as string);
+  };
+  
+  const rejectAction = async (formData: FormData) => {
+    "use server";
+    const { rejectBookingAction } = await import("@/app/actions/ride");
+    await rejectBookingAction(formData.get("bookingId") as string);
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <h2 className="text-2xl font-bold">Welcome back, {user.name}!</h2>
@@ -67,6 +92,44 @@ export default async function EmployeeDashboardOverview() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {pendingRequests.length > 0 && (
+          <Card className="lg:col-span-2 border-blue-200 shadow-sm">
+            <CardHeader className="bg-blue-50/50 pb-4 border-b border-blue-100">
+              <CardTitle className="text-blue-800 flex items-center">
+                <span className="relative flex h-3 w-3 mr-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                </span>
+                Pending Seat Requests ({pendingRequests.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-gray-100">
+                {pendingRequests.map(req => (
+                  <div key={req.id} className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-slate-50 transition-colors">
+                    <div>
+                      <p className="font-semibold text-gray-900">{req.passenger.name} <span className="font-normal text-gray-500">requests</span> {req.seatsBooked} seat(s)</p>
+                      <p className="text-sm text-gray-500 mt-0.5">
+                        Ride to <span className="font-medium text-gray-700">{req.ride.dropLocation}</span> on {new Date(req.ride.travelDateTime).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <form action={acceptAction} className="flex-1 sm:flex-none">
+                        <input type="hidden" name="bookingId" value={req.id} />
+                        <Button type="submit" size="sm" className="w-full bg-green-600 hover:bg-green-700 text-white">Accept</Button>
+                      </form>
+                      <form action={rejectAction} className="flex-1 sm:flex-none">
+                        <input type="hidden" name="bookingId" value={req.id} />
+                        <Button type="submit" size="sm" variant="outline" className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200">Reject</Button>
+                      </form>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>Upcoming Trips</CardTitle>

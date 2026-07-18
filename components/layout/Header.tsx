@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCurrentUserAction, logoutAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Car } from "lucide-react";
+import { NotificationBell } from "./NotificationBell";
 
 export async function Header() {
   const user = await getCurrentUserAction();
@@ -15,7 +16,8 @@ export async function Header() {
         </Link>
         <nav className="flex items-center gap-4">
           {user ? (
-            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4">
+                <NotificationBell />
               <span className="text-sm text-muted-foreground">
                 Hello, <span className="font-semibold text-foreground">{user.name}</span>
               </span>
