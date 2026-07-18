@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { getCurrentUserAction } from "./auth";
 import { revalidatePath } from "next/cache";
+import { createNotification } from "./notifications";
 
 export async function approveDriverAction(userId: string) {
   try {
@@ -28,6 +29,9 @@ export async function approveDriverAction(userId: string) {
       });
     }
 
+    // Emit notification to user
+    await createNotification(userId, "Profile Approved", "Your driver profile has been approved! You can now offer rides.");
+
     revalidatePath("/admin");
     return { success: true };
   } catch (error) {
@@ -49,6 +53,9 @@ export async function rejectDriverAction(userId: string, reason: string) {
         rejectionReason: reason 
       }
     });
+
+    // Emit notification to user
+    await createNotification(userId, "Profile Rejected", `Your driver profile was rejected. Reason: ${reason}`);
 
     revalidatePath("/admin");
     return { success: true };

@@ -149,3 +149,63 @@ export async function directAdminLoginAction() {
     return { success: false, error: "An unexpected error occurred" };
   }
 }
+
+import { sendPasswordResetOTPEmail } from "@/lib/mailer";
+
+export async function requestPasswordResetAction(email: string) {
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      // Return success even if user doesn't exist to prevent email enumeration
+      return { success: true }; 
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { otp, otpExpiry }
+    });
+
+    await sendPasswordResetOTPEmail(email, otp);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error requesting password reset:", error);
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function resetPasswordAction(email: string, otp: string, newPassword: string) {
+  try {
+    if (newPassword.length < 6) {
+      return { success: false, error: "Password must be at least 6 characters" };
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || user.otp !== otp) {
+      return { success: false, error: "Invalid OTP" };
+    }
+
+    if (!user.otpExpiry || user.otpExpiry < new Date()) {
+      return { success: false, error: "OTP has expired" };
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        otp: null,
+        otpExpiry: null
+      }
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}

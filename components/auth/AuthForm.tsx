@@ -144,9 +144,9 @@ export function AuthForm({ mode }: AuthFormProps) {
                 Password
               </label>
               {mode === "signin" && (
-                <a href="#" onClick={(e) => { e.preventDefault(); toast.info("Forgot password flow coming soon!"); }} className="text-xs text-blue-600 hover:underline">
+                <Link href="/auth/forgot-password" className="text-xs text-blue-600 hover:underline">
                   Forgot password?
-                </a>
+                </Link>
               )}
             </div>
             <Input

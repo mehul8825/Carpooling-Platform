@@ -3,6 +3,7 @@ import { ShieldCheck, Menu } from "lucide-react";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
@@ -33,6 +34,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
           <div className="hidden md:flex">
             <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">System Overview</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
           </div>
         </header>
 

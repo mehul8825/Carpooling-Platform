@@ -20,7 +20,7 @@ export async function sendTemporaryPasswordEmail(toEmail: string, name: string, 
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_SECURE === 'true',
+        secure: process.env.SMTP_PORT === '465' || process.env.SMTP_SECURE === 'true',
         auth: {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS,
@@ -39,6 +39,44 @@ export async function sendTemporaryPasswordEmail(toEmail: string, name: string, 
     return { success: true };
   } catch (error) {
     console.error("Error sending email:", error);
+    return { success: false, error: "Failed to send email" };
+  }
+}
+
+export async function sendPasswordResetOTPEmail(toEmail: string, otp: string) {
+  try {
+    console.log(`\n========== MOCK EMAIL SENT ==========`);
+    console.log(`To: ${toEmail}`);
+    console.log(`Subject: Password Reset Request - Carpooling Platform`);
+    console.log(`Message: `);
+    console.log(`You have requested to reset your password.\n`);
+    console.log(`Your 6-digit OTP is: ${otp}\n`);
+    console.log(`This OTP is valid for 10 minutes.\n`);
+    console.log(`=====================================\n`);
+    
+    if (process.env.SMTP_HOST) {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: process.env.SMTP_PORT === '465' || process.env.SMTP_SECURE === 'true',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || '"Admin" <admin@carpool.local>',
+        to: toEmail,
+        subject: "Password Reset Request - Carpooling Platform",
+        text: `You have requested to reset your password. Your 6-digit OTP is: ${otp}. It is valid for 10 minutes.`,
+        html: `<p>You have requested to reset your password.</p><p>Your 6-digit OTP is: <strong>${otp}</strong></p><p>It is valid for 10 minutes.</p>`,
+      });
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error sending OTP email:", error);
     return { success: false, error: "Failed to send email" };
   }
 }
