@@ -105,6 +105,11 @@ model RideBooking {
   // Driver Approval Flow
   status          String   @default("REQUESTED") // REQUESTED, APPROVED, REJECTED, COMPLETED, CANCELLED
   
+  // Payment Flow
+  paymentStatus   String   @default("PENDING") // PENDING, PAID, FAILED
+  razorpayOrderId String?
+  razorpayPaymentId String?
+
   createdAt       DateTime @default(now())
 }
 
