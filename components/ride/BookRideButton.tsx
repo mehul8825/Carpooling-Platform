@@ -8,20 +8,17 @@ import { Loader2 } from "lucide-react";
 
 interface BookRideButtonProps {
   rideId: string;
-  passengerId: string;
   pricePerSeat: number;
 }
 
-export function BookRideButton({ rideId, passengerId, pricePerSeat }: BookRideButtonProps) {
+export function BookRideButton({ rideId, pricePerSeat }: BookRideButtonProps) {
   const [isPending, startTransition] = useTransition();
 
   const handleBook = () => {
     startTransition(async () => {
       const res = await requestBookingAction({
         rideId,
-        passengerId,
         seatsBooked: 1,
-        totalFare: pricePerSeat,
       });
 
       if (res.success) {

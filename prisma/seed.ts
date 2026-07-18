@@ -23,7 +23,7 @@ async function main() {
     where: { email: 'admin@hackathoncorp.com' },
     update: {},
     create: {
-      email: 'admin@hackathoncorp.com',
+      email: 'gywaquba@denipl.com',
       name: 'System Admin',
       phone: '1234567890',
       role: 'ADMIN',

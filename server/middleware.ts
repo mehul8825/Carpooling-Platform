@@ -6,31 +6,33 @@ const SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "carpooling-super-secret-key-12345"
 );
 
+const protectedPaths = ["/offer-ride", "/find-ride"];
+
 export async function middleware(request: NextRequest) {
   const session = request.cookies.get("session")?.value;
+  const { pathname } = request.nextUrl;
 
-  // Protect /offer-ride path
-  if (request.nextUrl.pathname.startsWith("/offer-ride")) {
+  // Protect routes that require auth
+  if (protectedPaths.some((p) => pathname.startsWith(p))) {
     if (!session) {
       return NextResponse.redirect(new URL("/auth/signin", request.url));
     }
-
     try {
       await jwtVerify(session, SECRET);
       return NextResponse.next();
-    } catch (error) {
+    } catch {
       return NextResponse.redirect(new URL("/auth/signin", request.url));
     }
   }
 
   // Redirect authenticated users away from auth pages
-  if (request.nextUrl.pathname.startsWith("/auth")) {
+  if (pathname.startsWith("/auth")) {
     if (session) {
       try {
         await jwtVerify(session, SECRET);
         return NextResponse.redirect(new URL("/", request.url));
-      } catch (error) {
-        // Token is invalid, continue to auth pages
+      } catch {
+        // Token is invalid, allow access to auth pages
       }
     }
   }
@@ -39,5 +41,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/offer-ride/:path*", "/auth/:path*"],
+  matcher: ["/offer-ride/:path*", "/find-ride/:path*", "/auth/:path*"],
 };

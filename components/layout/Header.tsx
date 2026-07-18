@@ -1,29 +1,60 @@
 import Link from "next/link";
-import { getCurrentUserAction, logoutAction } from "@/app/actions/auth";
+import { getCurrentUserAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
-import { Car } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Car, Search, PlusCircle, LogOut, Menu, User } from "lucide-react";
+import { MobileNav } from "./MobileNav";
 
 export async function Header() {
   const user = await getCurrentUserAction();
 
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl text-primary">
-          <Car className="h-6 w-6" />
-          <span>ShareRide</span>
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto flex h-14 items-center justify-between px-4">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2 font-bold text-lg tracking-tight">
+          <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary text-primary-foreground">
+            <Car className="h-4 w-4" />
+          </div>
+          <span className="hidden sm:inline-block">ShareRide</span>
         </Link>
-        <nav className="flex items-center gap-4">
+
+        {/* Desktop Nav */}
+        <nav className="hidden md:flex items-center gap-1">
+          <Link href="/find-ride">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <Search className="h-4 w-4" />
+              Find Ride
+            </Button>
+          </Link>
+          <Link href="/offer-ride">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <PlusCircle className="h-4 w-4" />
+              Offer Ride
+            </Button>
+          </Link>
+        </nav>
+
+        {/* Desktop Auth / User */}
+        <div className="hidden md:flex items-center gap-2">
           {user ? (
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
-                Hello, <span className="font-semibold text-foreground">{user.name}</span>
-              </span>
-              <Link href="/offer-ride">
-                <Button variant="outline" size="sm">Offer Ride</Button>
-              </Link>
-              <form action={logoutAction}>
-                <Button variant="ghost" size="sm" type="submit" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex items-center justify-center h-7 w-7 rounded-full bg-muted text-muted-foreground">
+                  <User className="h-3.5 w-3.5" />
+                </div>
+                <span className="font-medium text-foreground max-w-[120px] truncate">
+                  {user.name}
+                </span>
+              </div>
+              <Separator orientation="vertical" className="h-5" />
+              <form action={async () => {
+                "use server";
+                const { logoutAction } = await import("@/app/actions/auth");
+                await logoutAction();
+              }}>
+                <Button variant="ghost" size="sm" type="submit" className="gap-2 text-muted-foreground hover:text-destructive">
+                  <LogOut className="h-4 w-4" />
                   Log out
                 </Button>
               </form>
@@ -38,7 +69,10 @@ export async function Header() {
               </Link>
             </div>
           )}
-        </nav>
+        </div>
+
+        {/* Mobile Nav Trigger */}
+        <MobileNav user={user} />
       </div>
     </header>
   );
