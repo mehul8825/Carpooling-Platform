@@ -5,11 +5,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { sendOtpAction, verifyOtpAction } from "@/app/actions/auth";
 import { toast } from "sonner";
-import { Mail, User, Loader2, ArrowRight, ArrowLeft } from "lucide-react";
+import { Mail, User, Loader2, ArrowRight, Phone, KeyRound } from "lucide-react";
 import Link from "next/link";
+import { loginUserAction, registerUserAction } from "@/app/actions/auth";
 
 interface AuthFormProps {
   mode: "signin" | "signup";
@@ -17,40 +16,39 @@ interface AuthFormProps {
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
-  const [step, setStep] = useState<"email" | "otp">("email");
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [otp, setOtp] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  const handleSendOtp = async (e: React.FormEvent) => {
+  // Signup fields
+  const [name, setName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return toast.error("Please enter your email");
-    if (mode === "signup" && !name) return toast.error("Please enter your name");
 
     startTransition(async () => {
-      const res = await sendOtpAction(email, name, mode === "signup");
-      if (res.success) {
-        toast.success("Verification code sent to your email!");
-        setStep("otp");
-      } else {
-        toast.error(res.error || "Failed to send code.");
-      }
-    });
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otp.length !== 6) return toast.error("Please enter a valid 6-digit code");
-
-    startTransition(async () => {
-      const res = await verifyOtpAction(email, otp);
-      if (res.success) {
-        toast.success("Successfully authenticated!");
-        router.push("/");
-        router.refresh();
-      } else {
-        toast.error(res.error || "Verification failed.");
+      try {
+        if (mode === "signup") {
+          const res = await registerUserAction({ name, phone: mobile, email, username, password });
+          if (res.success) {
+            toast.success("Account created successfully!");
+            router.push("/auth/signin");
+          } else {
+            toast.error(res.error || "Failed to create account.");
+          }
+        } else {
+          const res = await loginUserAction(username, password);
+          if (res.success) {
+            toast.success("Logged in successfully!");
+            router.push(res.role === "ADMIN" ? "/admin" : "/employee");
+          } else {
+            toast.error(res.error || "Invalid username or password.");
+          }
+        }
+      } catch (err) {
+        toast.error("An unexpected error occurred.");
       }
     });
   };
@@ -62,18 +60,16 @@ export function AuthForm({ mode }: AuthFormProps) {
           {mode === "signin" ? "Sign In" : "Create an Account"}
         </CardTitle>
         <CardDescription className="text-center">
-          {step === "email"
-            ? mode === "signin"
-              ? "Enter your email to sign in to your account"
-              : "Enter your details to create a new account"
-            : `We've sent a 6-digit verification code to ${email}`}
+          {mode === "signin"
+            ? "Enter your username and password to sign in"
+            : "Fill in the details below to register"}
         </CardDescription>
       </CardHeader>
 
       <CardContent>
-        {step === "email" ? (
-          <form onSubmit={handleSendOtp} className="space-y-4">
-            {mode === "signup" && (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === "signup" && (
+            <>
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2">
                   <User className="w-4 h-4 text-muted-foreground" />
@@ -88,105 +84,110 @@ export function AuthForm({ mode }: AuthFormProps) {
                   required
                 />
               </div>
-            )}
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Mail className="w-4 h-4 text-muted-foreground" />
-                Email Address
-              </label>
-              <Input
-                placeholder="name@example.com"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isPending}
-                required
-              />
-            </div>
 
-            <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending Code...
-                </>
-              ) : (
-                <>
-                  Send Code
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </form>
-        ) : (
-          <form onSubmit={handleVerifyOtp} className="space-y-6 flex flex-col items-center">
-            <div className="space-y-2 w-full text-center">
-              <label className="text-sm font-medium">Enter Verification Code</label>
-              <div className="flex justify-center mt-2">
-                <InputOTP
-                  maxLength={6}
-                  value={otp}
-                  onChange={(value) => setOtp(value)}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-muted-foreground" />
+                  Mobile Number
+                </label>
+                <Input
+                  placeholder="1234567890"
+                  type="tel"
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
                   disabled={isPending}
-                >
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
+                  required
+                />
               </div>
-            </div>
 
-            <div className="flex gap-3 w-full">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setStep("email")}
-                disabled={isPending}
-                className="flex-1"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-              <Button type="submit" className="flex-1" disabled={isPending || otp.length !== 6}>
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  "Verify & Sign In"
-                )}
-              </Button>
-            </div>
-          </form>
-        )}
-      </CardContent>
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-muted-foreground" />
+                  Email Address
+                </label>
+                <Input
+                  placeholder="name@example.com"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isPending}
+                  required
+                />
+              </div>
+            </>
+          )}
 
-      <CardFooter className="flex flex-col space-y-2">
-        {step === "email" && (
-          <p className="text-sm text-center text-muted-foreground w-full">
-            {mode === "signin" ? (
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <User className="w-4 h-4 text-muted-foreground" />
+              Username
+            </label>
+            <Input
+              placeholder="johndoe123"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={isPending}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-muted-foreground" />
+                Password
+              </label>
+              {mode === "signin" && (
+                <a href="#" onClick={(e) => { e.preventDefault(); toast.info("Forgot password flow coming soon!"); }} className="text-xs text-blue-600 hover:underline">
+                  Forgot password?
+                </a>
+              )}
+            </div>
+            <Input
+              placeholder="••••••••"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isPending}
+              required
+            />
+          </div>
+
+          <Button type="submit" className="w-full mt-4" disabled={isPending}>
+            {isPending ? (
               <>
-                Don&apos;t have an account?{" "}
-                <Link href="/auth/signup" className="text-primary hover:underline font-medium">
-                  Sign Up
-                </Link>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {mode === "signin" ? "Signing In..." : "Creating Account..."}
               </>
             ) : (
               <>
-                Already have an account?{" "}
-                <Link href="/auth/signin" className="text-primary hover:underline font-medium">
-                  Sign In
-                </Link>
+                {mode === "signin" ? "Sign In" : "Sign Up"}
+                <ArrowRight className="ml-2 h-4 w-4" />
               </>
             )}
-          </p>
-        )}
+          </Button>
+        </form>
+      </CardContent>
+
+      <CardFooter className="flex flex-col space-y-2">
+        <p className="text-sm text-center text-muted-foreground w-full">
+          {mode === "signin" ? (
+            <>
+              Don&apos;t have an account?{" "}
+              <Link href="/auth/signup" className="text-primary hover:underline font-medium">
+                Sign Up
+              </Link>
+            </>
+          ) : (
+            <>
+              Already have an account?{" "}
+              <Link href="/auth/signin" className="text-primary hover:underline font-medium">
+                Sign In
+              </Link>
+            </>
+          )}
+        </p>
       </CardFooter>
     </Card>
   );

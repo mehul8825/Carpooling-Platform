@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { verifySession } from "@/lib/auth";
+import { getCurrentUserAction } from "./auth";
 import { revalidatePath } from "next/cache";
 
 // ─────────────────────────────────────────────
@@ -20,7 +20,8 @@ export async function publishRideAction(data: {
   farePerSeat: number;
 }) {
   try {
-    const userId = await verifySession();
+    const user = await getCurrentUserAction();
+    const userId = user?.id;
     if (!userId) return { success: false, error: "Not authenticated" };
 
     // Ensure user has a vehicle (auto-create for hackathon demo)
@@ -103,7 +104,8 @@ export async function searchRidesAction(data: {
   radiusKm?: number;
 }) {
   try {
-    const userId = await verifySession();
+    const user = await getCurrentUserAction();
+    const userId = user?.id;
     const radiusKm = data.radiusKm || 5; // default 5 km radius
 
     // Fetch all published rides with available seats
@@ -155,7 +157,8 @@ export async function requestBookingAction(data: {
   seatsBooked: number;
 }) {
   try {
-    const userId = await verifySession();
+    const user = await getCurrentUserAction();
+    const userId = user?.id;
     if (!userId) return { success: false, error: "Not authenticated" };
 
     const ride = await prisma.ride.findUnique({
@@ -173,6 +176,11 @@ export async function requestBookingAction(data: {
         passengerId: userId,
         status: { in: ["REQUESTED", "APPROVED"] },
       },
+      include: {
+        driver: { select: { name: true, username: true } },
+        vehicle: true
+      },
+      orderBy: { travelDateTime: "asc" }
     });
 
     if (existingBooking) return { success: false, error: "You already have a booking on this ride" };
@@ -204,7 +212,8 @@ export async function requestBookingAction(data: {
 
 export async function approveBookingAction(bookingId: string) {
   try {
-    const userId = await verifySession();
+    const user = await getCurrentUserAction();
+    const userId = user?.id;
     if (!userId) return { success: false, error: "Not authenticated" };
 
     const booking = await prisma.rideBooking.findUnique({
@@ -232,15 +241,16 @@ export async function approveBookingAction(bookingId: string) {
 
     revalidatePath("/offer-ride");
     return { success: true };
-  } catch (error: any) {
-    console.error("Failed to approve booking:", error);
-    return { success: false, error: error.message };
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: "Failed to book ride" };
   }
 }
 
 export async function rejectBookingAction(bookingId: string) {
   try {
-    const userId = await verifySession();
+    const user = await getCurrentUserAction();
+    const userId = user?.id;
     if (!userId) return { success: false, error: "Not authenticated" };
 
     const booking = await prisma.rideBooking.findUnique({
