@@ -1,129 +1,96 @@
 "use server";
 
 import { prisma } from "@/lib/db";
+import { getCurrentUserAction } from "./auth";
 import { revalidatePath } from "next/cache";
 
 export async function publishRideAction(data: {
-  driverId: string;
+  from: string;
+  to: string;
+  date: string;
+  seats: number;
+  fare: number;
   vehicleId: string;
-  pickupLocation: string;
-  pickupLat: number;
-  pickupLng: number;
-  dropLocation: string;
-  dropLat: number;
-  dropLng: number;
-  travelDateTime: Date;
-  availableSeats: number;
-  farePerSeat: number;
 }) {
   try {
-    // Demo/Hackathon Fix: Auto-fetch or create a valid user and vehicle
-    let user = await prisma.user.findFirst();
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          name: "Test Driver",
-          email: "driver@example.com",
-          role: "EMPLOYEE",
-        },
-      });
-    }
+    const user = await getCurrentUserAction();
+    if (!user) return { success: false, error: "Not authenticated" };
 
-    let vehicle = await prisma.vehicle.findFirst({
-      where: { driverId: user.id },
-    });
-    
-    if (!vehicle) {
-      vehicle = await prisma.vehicle.create({
-        data: {
-          driverId: user.id,
-          vehicleModel: "Toyota Prius",
-          registrationNo: "XYZ 1234",
-          seatingCapacity: 4,
-        },
-      });
-    }
-
-    const ride = await prisma.ride.create({
+    await prisma.ride.create({
       data: {
         driverId: user.id,
-        vehicleId: vehicle.id,
-        pickupLocation: data.pickupLocation,
-        pickupLat: data.pickupLat,
-        pickupLng: data.pickupLng,
-        dropLocation: data.dropLocation,
-        dropLat: data.dropLat,
-        dropLng: data.dropLng,
-        travelDateTime: data.travelDateTime,
-        availableSeats: data.availableSeats,
-        farePerSeat: data.farePerSeat,
-        status: "PUBLISHED",
-      },
+        vehicleId: data.vehicleId,
+        pickupLocation: data.from,
+        pickupLat: 0, // Mock
+        pickupLng: 0,
+        dropLocation: data.to,
+        dropLat: 0,
+        dropLng: 0,
+        travelDateTime: new Date(data.date),
+        availableSeats: data.seats,
+        farePerSeat: data.fare,
+        status: "PUBLISHED"
+      }
     });
-    
-    revalidatePath("/rides");
-    return { success: true, ride };
-  } catch (error: any) {
-    console.error("Failed to publish ride:", error);
-    return { success: false, error: error.message };
+
+    revalidatePath("/employee/offer-ride");
+    revalidatePath("/employee");
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: "Failed to publish ride" };
   }
 }
 
-export async function requestBookingAction(data: {
-  rideId: string;
-  passengerId: string;
-  seatsBooked: number;
-  totalFare: number;
+export async function searchRidesAction(data: {
+  from: string;
+  to: string;
+  seats: number;
 }) {
   try {
-    const booking = await prisma.rideBooking.create({
-      data: {
-        rideId: data.rideId,
-        passengerId: data.passengerId,
-        seatsBooked: data.seatsBooked,
-        totalFare: data.totalFare,
-        status: "REQUESTED",
+    // In a real app we'd do geospatial search or text search.
+    // For now we just return all published rides that have enough seats.
+    const rides = await prisma.ride.findMany({
+      where: {
+        status: "PUBLISHED",
+        availableSeats: { gte: data.seats },
       },
+      include: {
+        driver: { select: { name: true, username: true } },
+        vehicle: true
+      },
+      orderBy: { travelDateTime: "asc" }
     });
 
-    return { success: true, booking };
-  } catch (error: any) {
-    console.error("Failed to request booking:", error);
-    return { success: false, error: error.message };
+    return { success: true, rides };
+  } catch (error) {
+    return { success: false, error: "Failed to search rides" };
   }
 }
 
-export async function approveBookingAction(bookingId: string, driverId: string) {
+export async function requestBookingAction(rideId: string, seats: number = 1) {
   try {
-    // 1. Fetch the booking
-    const booking = await prisma.rideBooking.findUnique({
-      where: { id: bookingId },
-      include: { ride: true },
+    const user = await getCurrentUserAction();
+    if (!user) return { success: false, error: "Not authenticated" };
+
+    const ride = await prisma.ride.findUnique({ where: { id: rideId } });
+    if (!ride) return { success: false, error: "Ride not found" };
+
+    await prisma.rideBooking.create({
+      data: {
+        rideId,
+        passengerId: user.id,
+        seatsBooked: seats,
+        totalFare: ride.farePerSeat * seats,
+        status: "REQUESTED"
+      }
     });
 
-    if (!booking) throw new Error("Booking not found");
-    if (booking.ride.driverId !== driverId) throw new Error("Unauthorized");
-    if (booking.status !== "REQUESTED") throw new Error("Booking is not in REQUESTED state");
-    if (booking.ride.availableSeats < booking.seatsBooked) {
-      throw new Error("Not enough seats available");
-    }
-
-    // 2. Update booking and ride in a transaction
-    await prisma.$transaction([
-      prisma.rideBooking.update({
-        where: { id: bookingId },
-        data: { status: "APPROVED" },
-      }),
-      prisma.ride.update({
-        where: { id: booking.rideId },
-        data: { availableSeats: { decrement: booking.seatsBooked } },
-      }),
-    ]);
-
-    revalidatePath("/rides");
+    revalidatePath("/employee");
+    revalidatePath("/");
     return { success: true };
-  } catch (error: any) {
-    console.error("Failed to approve booking:", error);
-    return { success: false, error: error.message };
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: "Failed to book ride" };
   }
 }

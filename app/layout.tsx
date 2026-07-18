@@ -12,6 +12,8 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 })
 
+import { Header } from "@/components/layout/Header";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -25,7 +27,12 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          {children}
+          <div className="flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-1">
+              {children}
+            </main>
+          </div>
           <Toaster />
         </ThemeProvider>
       </body>

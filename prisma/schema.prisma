@@ -10,9 +10,11 @@ datasource db {
 model User {
   id            String         @id @default(cuid())
   role          String         @default("EMPLOYEE") // ADMIN or EMPLOYEE
+  username      String?        @unique
   phone         String?        @unique
   email         String?        @unique
   name          String?
+  password      String?
   otp           String?
   otpExpiry     DateTime?
   driverProfile DriverProfile?
