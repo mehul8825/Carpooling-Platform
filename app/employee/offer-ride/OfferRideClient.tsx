@@ -22,14 +22,49 @@ export function OfferRideClient({ initialStatus, vehicles, initialRejectionReaso
   const [driverStatus, setDriverStatus] = useState<"NEW" | "PENDING" | "APPROVED" | "REJECTED">(initialStatus);
   const router = useRouter();
 
-  const handleDocumentSubmit = async (e: React.FormEvent) => {
+  const [isSubmittingDocs, setIsSubmittingDocs] = useState(false);
+
+  const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+
+  const handleDocumentSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const res = await submitDriverVerificationAction();
-    if (res.success) {
-      toast.success("Documents submitted successfully for verification.");
-      setDriverStatus("PENDING");
-    } else {
-      toast.error(res.error);
+    setIsSubmittingDocs(true);
+    
+    try {
+      const formData = new FormData(e.currentTarget);
+      const drivingLicenceFile = formData.get("drivingLicence") as File;
+      const aadharCardFile = formData.get("aadharCard") as File;
+      const vehiclePucFile = formData.get("vehiclePuc") as File;
+      const driverPhotoFile = formData.get("driverPhoto") as File;
+      const vehicleFrontFile = formData.get("vehicleFront") as File;
+      const vehicleRearFile = formData.get("vehicleRear") as File;
+
+      const docs = {
+        drivingLicence: drivingLicenceFile?.size > 0 ? await toBase64(drivingLicenceFile) : undefined,
+        aadharCard: aadharCardFile?.size > 0 ? await toBase64(aadharCardFile) : undefined,
+        vehiclePuc: vehiclePucFile?.size > 0 ? await toBase64(vehiclePucFile) : undefined,
+        driverPhoto: driverPhotoFile?.size > 0 ? await toBase64(driverPhotoFile) : undefined,
+        vehicleFront: vehicleFrontFile?.size > 0 ? await toBase64(vehicleFrontFile) : undefined,
+        vehicleRear: vehicleRearFile?.size > 0 ? await toBase64(vehicleRearFile) : undefined,
+      };
+
+      const res = await submitDriverVerificationAction(docs);
+      if (res.success) {
+        toast.success("Documents submitted successfully for verification.");
+        setDriverStatus("PENDING");
+      } else {
+        toast.error(res.error || "Failed to submit documents");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("An error occurred while uploading documents. They might be too large.");
+    } finally {
+      setIsSubmittingDocs(false);
     }
   };
 
@@ -116,27 +151,27 @@ export function OfferRideClient({ initialStatus, vehicles, initialRejectionReaso
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>Driving Licence</Label>
-                  <Input type="file" required />
+                  <Input type="file" name="drivingLicence" accept="image/*" required />
                 </div>
                 <div className="space-y-2">
                   <Label>Aadhar Card</Label>
-                  <Input type="file" required />
+                  <Input type="file" name="aadharCard" accept="image/*" required />
                 </div>
                 <div className="space-y-2">
                   <Label>PUC Certificate</Label>
-                  <Input type="file" required />
+                  <Input type="file" name="vehiclePuc" accept="image/*" required />
                 </div>
                 <div className="space-y-2">
                   <Label>Your Personal Photo</Label>
-                  <Input type="file" required />
+                  <Input type="file" name="driverPhoto" accept="image/*" required />
                 </div>
                 <div className="space-y-2">
                   <Label>Vehicle Front (Number Plate)</Label>
-                  <Input type="file" required />
+                  <Input type="file" name="vehicleFront" accept="image/*" required />
                 </div>
                 <div className="space-y-2">
                   <Label>Vehicle Rear (Number Plate)</Label>
-                  <Input type="file" required />
+                  <Input type="file" name="vehicleRear" accept="image/*" required />
                 </div>
               </div>
 

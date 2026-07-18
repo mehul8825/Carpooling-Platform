@@ -42,6 +42,11 @@ export async function publishRideAction(data: {
 
     if (!user) throw new Error("User not found");
 
+    const driverProfile = await prisma.driverProfile.findUnique({ where: { userId } });
+    if (!driverProfile || driverProfile.status !== "APPROVED") {
+      return { success: false, error: "Your driver profile must be approved by an admin before you can offer a ride." };
+    }
+
     const ride = await prisma.ride.create({
       data: {
         driverId: userId,

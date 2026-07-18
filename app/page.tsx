@@ -31,28 +31,41 @@ export default async function Page() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-            <Link href="/find-ride">
-              <Button size="lg" className="gap-2 px-6 w-full sm:w-auto">
-                <Search className="h-4 w-4" />
-                Find a Ride
-              </Button>
-            </Link>
-            <Link href="/offer-ride">
-              <Button size="lg" variant="outline" className="gap-2 px-6 w-full sm:w-auto">
-                <PlusCircle className="h-4 w-4" />
-                Offer a Ride
-              </Button>
-            </Link>
+            {!user ? (
+              <>
+                <Link href="/auth/signin">
+                  <Button size="lg" className="px-8 w-full sm:w-auto">
+                    Employee Login
+                  </Button>
+                </Link>
+                <Link href="/auth/signup">
+                  <Button size="lg" variant="outline" className="px-8 w-full sm:w-auto">
+                    New User Registration
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link href="/employee/find-ride">
+                  <Button size="lg" className="gap-2 px-6 w-full sm:w-auto">
+                    <Search className="h-4 w-4" />
+                    Find a Ride
+                  </Button>
+                </Link>
+                <Link href="/employee/offer-ride">
+                  <Button size="lg" variant="outline" className="gap-2 px-6 w-full sm:w-auto">
+                    <PlusCircle className="h-4 w-4" />
+                    Offer a Ride
+                  </Button>
+                </Link>
+                <Link href={user.role === "ADMIN" ? "/admin" : "/employee"}>
+                  <Button size="lg" variant="secondary" className="px-6 w-full sm:w-auto">
+                    Go to Dashboard
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
-
-          {!user && (
-            <p className="text-xs text-muted-foreground pt-2">
-              <Link href="/auth/signup" className="text-primary hover:underline font-medium">
-                Create a free account
-              </Link>{" "}
-              to start booking rides.
-            </p>
-          )}
         </div>
       </section>
 

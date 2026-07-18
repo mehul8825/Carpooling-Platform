@@ -41,6 +41,11 @@ export function AuthForm({ mode }: AuthFormProps) {
         } else {
           const res = await loginUserAction(username, password);
           if (res.success) {
+            if (res.forcePasswordChange) {
+              toast.info("Please change your temporary password.");
+              router.push(`/auth/change-password?userId=${res.user?.id}`);
+              return;
+            }
             toast.success("Logged in successfully!");
             router.push(res.role === "ADMIN" ? "/admin" : "/employee");
           } else {

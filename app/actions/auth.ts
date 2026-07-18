@@ -52,7 +52,8 @@ export async function registerUserAction(data: z.infer<typeof registerSchema>) {
     return { success: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { success: false, error: (error as z.ZodError).errors[0].message };
+      // @ts-expect-error - ZodError generic type issue
+      return { success: false, error: error.errors[0].message };
     }
     return { success: false, error: "An unexpected error occurred" };
   }
@@ -74,6 +75,14 @@ export async function loginUserAction(username: string, password: string) {
       return { success: false, error: "Invalid username or password" };
     }
 
+    if (user.forcePasswordChange) {
+      return {
+        success: true,
+        forcePasswordChange: true,
+        user: { id: user.id, name: user.name, username: user.username, role: user.role }
+      };
+    }
+
     (await cookies()).set("session_user_id", user.id, { httpOnly: true, path: "/" });
 
     return { 
@@ -83,6 +92,24 @@ export async function loginUserAction(username: string, password: string) {
     };
   } catch (error) {
     return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+export async function changePasswordAction(userId: string, newPassword: string) {
+  try {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+        forcePasswordChange: false
+      }
+    });
+
+    (await cookies()).set("session_user_id", userId, { httpOnly: true, path: "/" });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to update password" };
   }
 }
 
