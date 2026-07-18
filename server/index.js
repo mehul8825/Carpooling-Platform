@@ -29,15 +29,39 @@ app.prepare().then(() => {
     }
   });
 
+  const driverLocations = new Map();
+
   io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
+    
+    // Join a specific trip room
+    socket.on('join_trip', ({ tripId }) => {
+      socket.join(`trip_${tripId}`);
+      console.log(`Socket ${socket.id} joined trip_${tripId}`);
+    });
+
+    // Driver emits location
+    socket.on('driver_location_update', ({ tripId, driverId, lat, lng }) => {
+      driverLocations.set(driverId, { lat, lng, lastSeen: Date.now(), tripId });
+      io.to(`trip_${tripId}`).emit('location_update', { lat, lng });
+    });
 
     socket.on('disconnect', () => {
       console.log('User disconnected:', socket.id);
     });
-    
-    // Setup further chat and tracking socket events later
   });
+
+  // Edge Case A: Driver Loses Internet
+  // Periodically check if driver hasn't updated in 30 seconds
+  setInterval(() => {
+    const now = Date.now();
+    for (const [driverId, data] of driverLocations.entries()) {
+      if (now - data.lastSeen > 30000) {
+        io.to(`trip_${data.tripId}`).emit('driver_offline', { driverId });
+        driverLocations.delete(driverId);
+      }
+    }
+  }, 10000);
 
   server.once('error', (err) => {
     console.error(err);

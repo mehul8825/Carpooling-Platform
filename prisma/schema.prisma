@@ -16,6 +16,12 @@ model User {
   otp           String?
   otpExpiry     DateTime?
   driverProfile DriverProfile?
+  
+  vehicles          Vehicle[]       @relation("UserVehicles")
+  driverRides       Ride[]          @relation("DriverRides")
+  passengerBookings RideBooking[]   @relation("PassengerBookings")
+  savedLocations    SavedLocation[] @relation("UserLocations")
+
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -42,4 +48,67 @@ model CompanySettings {
   adminEmail     String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+model Vehicle {
+  id               String   @id @default(cuid())
+  driverId         String
+  driver           User     @relation("UserVehicles", fields: [driverId], references: [id])
+  vehicleModel     String
+  registrationNo   String
+  seatingCapacity  Int
+  createdAt        DateTime @default(now())
+  
+  Ride             Ride[]
+}
+
+model Ride {
+  id              String   @id @default(cuid())
+  driverId        String
+  driver          User     @relation("DriverRides", fields: [driverId], references: [id])
+  vehicleId       String
+  vehicle         Vehicle  @relation(fields: [vehicleId], references: [id])
+  
+  // Geographical Data
+  pickupLocation  String
+  pickupLat       Float
+  pickupLng       Float
+  
+  dropLocation    String
+  dropLat         Float
+  dropLng         Float
+  
+  travelDateTime  DateTime
+  availableSeats  Int
+  farePerSeat     Float
+  status          String   @default("PUBLISHED") // PUBLISHED, ONGOING, COMPLETED, CANCELLED
+  
+  bookings        RideBooking[]
+  createdAt       DateTime @default(now())
+}
+
+model RideBooking {
+  id              String   @id @default(cuid())
+  rideId          String
+  ride            Ride     @relation(fields: [rideId], references: [id])
+  passengerId     String
+  passenger       User     @relation("PassengerBookings", fields: [passengerId], references: [id])
+  
+  seatsBooked     Int
+  totalFare       Float
+  
+  // Driver Approval Flow
+  status          String   @default("REQUESTED") // REQUESTED, APPROVED, REJECTED, COMPLETED, CANCELLED
+  
+  createdAt       DateTime @default(now())
+}
+
+model SavedLocation {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("UserLocations", fields: [userId], references: [id])
+  name        String   // e.g., "Home", "Office"
+  address     String
+  lat         Float
+  lng         Float
 }
