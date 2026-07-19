@@ -2,11 +2,19 @@ import Link from "next/link";
 import { getCurrentUserAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Car, Search, PlusCircle, LogOut, Menu, User } from "lucide-react";
+import { Car, Search, PlusCircle, LogOut, Menu, User, LayoutDashboard, Wallet, ShieldCheck } from "lucide-react";
 import { MobileNav } from "./MobileNav";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { prisma } from "@/lib/db";
 
 export async function Header() {
   const user = await getCurrentUserAction();
+  
+  let currentBalance = 0;
+  if (user) {
+    const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
+    currentBalance = wallet?.balance || 0;
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -39,15 +47,44 @@ export async function Header() {
         <div className="hidden md:flex items-center gap-2">
           {user ? (
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {/* Added Balance & Notification */}
+              <div className="hidden lg:flex items-center space-x-4 mr-2">
+                <Link href="/employee/wallet">
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 cursor-pointer transition-colors bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-full border">
+                    <Wallet className="w-4 h-4 inline mr-2 text-purple-500" />
+                    <span className="text-green-600 font-bold">₹{currentBalance.toFixed(2)}</span>
+                  </span>
+                </Link>
+                <NotificationBell />
+              </div>
+              <Separator orientation="vertical" className="h-5 hidden lg:block" />
+              
+              {/* Dashboard Link based on Role */}
+              {user.role === "ADMIN" ? (
+                <Link href="/admin">
+                  <Button variant="outline" size="sm" className="gap-2 text-blue-600 border-blue-200 hover:bg-blue-50">
+                    <ShieldCheck className="h-4 w-4" />
+                    Admin
+                  </Button>
+                </Link>
+              ) : (
+                <Link href="/employee">
+                  <Button variant="outline" size="sm" className="gap-2 text-blue-600 border-blue-200 hover:bg-blue-50">
+                    <LayoutDashboard className="h-4 w-4" />
+                    Dashboard
+                  </Button>
+                </Link>
+              )}
+              
+              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground ml-2">
                 <div className="flex items-center justify-center h-7 w-7 rounded-full bg-muted text-muted-foreground">
                   <User className="h-3.5 w-3.5" />
                 </div>
-                <span className="font-medium text-foreground max-w-[120px] truncate">
+                <span className="font-medium text-foreground max-w-[100px] truncate">
                   {user.name}
                 </span>
               </div>
-              <Separator orientation="vertical" className="h-5" />
+              <Separator orientation="vertical" className="h-5 hidden sm:block" />
               <form action={async () => {
                 "use server";
                 const { logoutAction } = await import("@/app/actions/auth");

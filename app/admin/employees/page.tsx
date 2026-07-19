@@ -6,6 +6,7 @@ import { Users, Mail, Phone, Calendar } from "lucide-react";
 import { AddEmployeeModal } from "@/components/admin/AddEmployeeModal";
 import { EditEmployeeModal } from "@/components/admin/EditEmployeeModal";
 import { DeleteEmployeeButton } from "@/components/admin/DeleteEmployeeButton";
+import { SendCredentialsButton } from "@/components/admin/SendCredentialsButton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default async function EmployeesPage() {
@@ -84,6 +85,7 @@ export default async function EmployeesPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
+                          <SendCredentialsButton employeeId={emp.id} employeeName={emp.name} />
                           <EditEmployeeModal employee={{ id: emp.id, name: emp.name, email: emp.email, phone: emp.phone }} />
                           <DeleteEmployeeButton employeeId={emp.id} employeeName={emp.name} />
                         </div>

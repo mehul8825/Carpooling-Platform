@@ -19,6 +19,7 @@ model User {
   otpExpiry     DateTime?
   forcePasswordChange Boolean @default(false)
   driverProfile DriverProfile?
+  wallet        Wallet?
   
   vehicles          Vehicle[]       @relation("UserVehicles")
   driverRides       Ride[]          @relation("DriverRides")
@@ -135,6 +136,29 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id])
   title     String
   message   String
+  link      String?  // Optional URL associated with this notification
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+model Wallet {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  balance   Float    @default(0.0)
+  
+  transactions Transaction[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  walletId    String
+  wallet      Wallet   @relation(fields: [walletId], references: [id])
+  amount      Float
+  type        String   // CREDIT or DEBIT
+  description String
+  createdAt   DateTime @default(now())
 }

@@ -1,30 +1,24 @@
 import { ReactNode } from "react";
 import Link from "next/link";
-import { LayoutDashboard, Search, Car, History, Wallet, User, LogOut } from "lucide-react";
+import { LayoutDashboard, Search, Car, History, Wallet, User, LogOut, PieChart, Settings } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { getCurrentUserAction } from "@/app/actions/auth";
+import { prisma } from "@/lib/db";
 
-export default function EmployeeLayout({ children }: { children: ReactNode }) {
+export default async function EmployeeLayout({ children }: { children: ReactNode }) {
+  const user = await getCurrentUserAction();
+  
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white dark:bg-gray-800 border-r dark:border-gray-700 hidden md:flex flex-col">
-        <div className="h-16 flex items-center px-6 border-b dark:border-gray-700 font-bold text-lg text-blue-600 dark:text-blue-400">
-          CarpoolApp
-        </div>
-        
-        <div className="p-4 border-b dark:border-gray-700">
-          <div className="flex items-center space-x-3 hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded-md transition">
-            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center text-blue-600 font-bold">
-              EMP
-            </div>
-            <div>
-              <p className="font-semibold text-sm">Employee User</p>
-              <Link href="/employee/profile" className="text-xs text-blue-600 dark:text-blue-400 font-medium">View Profile</Link>
-            </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 md:gap-8">
+        {/* Sidebar */}
+        <aside className="hidden md:flex flex-col col-span-1 border rounded-xl bg-card text-card-foreground shadow-sm h-fit">
+          <div className="p-6 border-b dark:border-gray-800">
+            <h2 className="font-bold text-xl tracking-tight text-blue-600 dark:text-blue-400">Employee Portal</h2>
+            <p className="text-sm text-muted-foreground mt-1">Manage your rides and account</p>
           </div>
-        </div>
-
-        <nav className="flex-1 p-4 space-y-1">
+          
+          <nav className="p-4 space-y-1">
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-4 px-4">Overview</div>
           <Link href="/employee" className="flex items-center px-4 py-2.5 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <LayoutDashboard className="w-5 h-5 mr-3" /> Dashboard
@@ -45,34 +39,32 @@ export default function EmployeeLayout({ children }: { children: ReactNode }) {
           <Link href="/employee/wallet" className="flex items-center px-4 py-2.5 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <Wallet className="w-5 h-5 mr-3" /> Wallet & Earnings
           </Link>
+          <Link href="/employee/reports" className="flex items-center px-4 py-2.5 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <PieChart className="w-5 h-5 mr-3" /> Reports & Analytics
+          </Link>
+          <Link href="/employee/settings" className="flex items-center px-4 py-2.5 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <Settings className="w-5 h-5 mr-3" /> Settings
+          </Link>
         </nav>
         
-        <div className="p-4 border-t dark:border-gray-700">
-          <Link href="/auth/signin" className="flex items-center px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors">
-            <LogOut className="w-5 h-5 mr-3" /> Logout
-          </Link>
-        </div>
-      </aside>
+          <div className="p-4 border-t dark:border-gray-800 mt-4">
+            <form action={async () => {
+              "use server";
+              const { logoutAction } = await import("@/app/actions/auth");
+              await logoutAction();
+            }}>
+              <button type="submit" className="w-full flex items-center px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors">
+                <LogOut className="w-5 h-5 mr-3" /> Logout
+              </button>
+            </form>
+          </div>
+        </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        <header className="h-16 bg-white dark:bg-gray-800 border-b dark:border-gray-700 flex items-center justify-between px-6">
-          <div className="flex items-center md:hidden">
-            <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">CarpoolApp</h1>
-          </div>
-          <div className="hidden md:flex">
-            <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Employee Portal</h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Balance: <span className="text-green-600 font-bold">$0.00</span></span>
-            <NotificationBell />
-          </div>
-        </header>
-
-        <div className="flex-1 overflow-auto p-4 md:p-8">
+        {/* Main Content Area */}
+        <main className="col-span-1 md:col-span-3">
           {children}
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

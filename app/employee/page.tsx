@@ -14,11 +14,11 @@ export default async function EmployeeDashboardOverview() {
   const ridesOfferedCount = await prisma.ride.count({ where: { driverId: user.id } });
   const ridesTakenCount = await prisma.rideBooking.count({ where: { passengerId: user.id } });
   
-  // Calculate earnings (mock logic: sum of all published rides fare per seat * seats * 0.8 just as a dummy number, or real booking logic)
   const allRides = await prisma.ride.findMany({ where: { driverId: user.id } });
-  const totalEarnings = allRides.reduce((acc, ride) => acc + (ride.farePerSeat * (6 - ride.availableSeats)), 0);
-
-  // Fetch pending booking requests for this driver
+  
+  // Fetch actual wallet balance
+  const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
+  const currentBalance = wallet?.balance || 0;
   const pendingRequests = await prisma.rideBooking.findMany({
     where: {
       ride: { driverId: user.id },
@@ -42,6 +42,17 @@ export default async function EmployeeDashboardOverview() {
     const { rejectBookingAction } = await import("@/app/actions/ride");
     await rejectBookingAction(formData.get("bookingId") as string);
   };
+
+  // Mock data for the CSS chart
+  const chartData = [
+    { month: "Jan", earnings: 120, rides: 15 },
+    { month: "Feb", earnings: 250, rides: 22 },
+    { month: "Mar", earnings: 180, rides: 18 },
+    { month: "Apr", earnings: 340, rides: 30 },
+    { month: "May", earnings: 290, rides: 25 },
+    { month: "Jun", earnings: Math.max(currentBalance, 450), rides: Math.max(ridesOfferedCount, 35) },
+  ];
+  const maxEarnings = Math.max(...chartData.map(d => d.earnings));
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -80,8 +91,8 @@ export default async function EmployeeDashboardOverview() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Total Earnings</p>
-                <h3 className="text-3xl font-bold mt-1">${totalEarnings.toFixed(2)}</h3>
+                <p className="text-sm font-medium text-gray-500">Wallet Balance</p>
+                <h3 className="text-3xl font-bold mt-1">₹{currentBalance.toFixed(2)}</h3>
               </div>
               <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center">
                 <Wallet className="w-6 h-6 text-purple-600" />
@@ -90,6 +101,33 @@ export default async function EmployeeDashboardOverview() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Dynamic CSS Bar Chart */}
+      <Card className="mb-8 border-none shadow-md overflow-hidden">
+        <CardHeader className="bg-white pb-0">
+          <CardTitle className="text-gray-800">Earnings Overview (Last 6 Months)</CardTitle>
+        </CardHeader>
+        <CardContent className="bg-white pt-6">
+          <div className="h-64 flex items-end justify-between gap-2 sm:gap-6 mt-4">
+            {chartData.map((data, i) => (
+              <div key={i} className="flex flex-col items-center w-full group">
+                {/* Tooltip on hover */}
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity mb-2 text-xs font-bold text-gray-700 bg-gray-100 px-2 py-1 rounded-md">
+                  ₹{data.earnings}
+                </div>
+                {/* Bar */}
+                <div 
+                  className="w-full bg-gradient-to-t from-blue-600 to-blue-400 rounded-t-md hover:from-blue-700 hover:to-blue-500 transition-all duration-300 relative"
+                  style={{ height: `${(data.earnings / maxEarnings) * 100}%`, minHeight: '4px' }}
+                >
+                  <div className="absolute -top-1 left-0 right-0 h-2 bg-blue-300/30 rounded-t-md"></div>
+                </div>
+                <div className="mt-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{data.month}</div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {pendingRequests.length > 0 && (
@@ -179,6 +217,11 @@ export default async function EmployeeDashboardOverview() {
             <Link href="/offer-ride" className="block">
               <Button variant="outline" className="w-full justify-start h-12 text-md">
                 <Car className="mr-3 w-5 h-5" /> Publish a New Ride
+              </Button>
+            </Link>
+            <Link href="/employee/wallet" className="block">
+              <Button variant="outline" className="w-full justify-start h-12 text-md text-purple-600 border-purple-200 hover:bg-purple-50">
+                <Wallet className="mr-3 w-5 h-5" /> Add/Withdraw Funds
               </Button>
             </Link>
           </CardContent>

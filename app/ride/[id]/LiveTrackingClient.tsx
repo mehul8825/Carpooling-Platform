@@ -25,7 +25,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * c;
 }
 import { useRef } from "react";
-import { approveBookingAction, rejectBookingAction } from "@/app/actions/ride";
+import { approveBookingAction, rejectBookingAction, completeRideAction } from "@/app/actions/ride";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
 

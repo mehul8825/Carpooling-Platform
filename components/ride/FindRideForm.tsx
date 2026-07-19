@@ -48,7 +48,7 @@ interface MatchedRide {
   vehicle: { vehicleModel: string; registrationNo: string; seatingCapacity: number };
 }
 
-export function FindRideForm({ userId }: { userId?: string }) {
+export function FindRideForm({ userId, savedLocations = [] }: { userId?: string, savedLocations?: any[] }) {
   const { socket } = useSocket(userId);
   const [pickup, setPickup] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [dropoff, setDropoff] = useState<{ lat: number; lng: number; address: string } | null>(null);
@@ -225,6 +225,22 @@ export function FindRideForm({ userId }: { userId?: string }) {
                 defaultValue={pickup?.address || ""}
                 onSelect={(lat, lng, addr) => { setPickup({ lat, lng, address: addr }); setSearched(false); }}
               />
+              {savedLocations.length > 0 && (
+                <div className="flex gap-2 mt-2 overflow-x-auto pb-1 hide-scrollbar">
+                  {savedLocations.map((loc) => (
+                    <Button 
+                      key={loc.id} 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-6 text-[10px] px-2 rounded-full whitespace-nowrap bg-slate-50 border-slate-200 hover:bg-slate-100" 
+                      onClick={() => { setPickup({ lat: loc.lat, lng: loc.lng, address: loc.address }); setSearched(false); }}
+                    >
+                      <MapPin className="w-3 h-3 mr-1 text-blue-500" /> {loc.name}
+                    </Button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
@@ -246,6 +262,22 @@ export function FindRideForm({ userId }: { userId?: string }) {
                 defaultValue={dropoff?.address || ""}
                 onSelect={(lat, lng, addr) => { setDropoff({ lat, lng, address: addr }); setSearched(false); }}
               />
+              {savedLocations.length > 0 && (
+                <div className="flex gap-2 mt-2 overflow-x-auto pb-1 hide-scrollbar">
+                  {savedLocations.map((loc) => (
+                    <Button 
+                      key={loc.id} 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-6 text-[10px] px-2 rounded-full whitespace-nowrap bg-slate-50 border-slate-200 hover:bg-slate-100" 
+                      onClick={() => { setDropoff({ lat: loc.lat, lng: loc.lng, address: loc.address }); setSearched(false); }}
+                    >
+                      <MapPin className="w-3 h-3 mr-1 text-emerald-500" /> {loc.name}
+                    </Button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

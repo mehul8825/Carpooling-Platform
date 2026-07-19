@@ -99,6 +99,34 @@ export async function addEmployeeAction(data: { name: string; email: string; pho
   }
 }
 
+export async function resendCredentialsAction(userId: string) {
+  try {
+    const admin = await getCurrentUserAction();
+    if (!admin || admin.role !== "ADMIN") return { success: false, error: "Unauthorized" };
+
+    const employee = await prisma.user.findUnique({ where: { id: userId } });
+    if (!employee) return { success: false, error: "Employee not found" };
+
+    const tempPassword = Math.random().toString(36).slice(-8);
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { 
+        password: hashedPassword,
+        forcePasswordChange: true 
+      }
+    });
+
+    await sendTemporaryPasswordEmail(employee.email, employee.name, tempPassword);
+
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: "Failed to send credentials" };
+  }
+}
+
 export async function getCompanySettingsAction() {
   try {
     const settings = await prisma.companySettings.findFirst();

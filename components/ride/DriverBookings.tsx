@@ -53,9 +53,9 @@ export function DriverBookings({ rides: initialRides, userId }: { rides: RideWit
   useEffect(() => {
     if (!socket) return;
     
-    const handleNewBooking = (booking: Booking & { rideId: string }) => {
+    const handleNewBooking = ({ booking, rideId }: { booking: Booking, rideId: string }) => {
       setRides(prev => prev.map(ride => {
-        if (ride.id === booking.rideId) {
+        if (ride.id === rideId) {
           // Check if booking already exists
           if (ride.bookings.some(b => b.id === booking.id)) return ride;
           return {
@@ -65,7 +65,7 @@ export function DriverBookings({ rides: initialRides, userId }: { rides: RideWit
         }
         return ride;
       }));
-      toast.info(`New booking request from ${booking.passenger.name || booking.passenger.email}!`);
+      toast.info(`New booking request from ${booking.passenger.name || booking.passenger.email || 'a passenger'}!`);
     };
 
     socket.on("new_booking_request", handleNewBooking);

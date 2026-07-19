@@ -7,43 +7,40 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Desktop Sidebar */}
-      <aside className="w-64 hidden md:flex flex-col h-full bg-white dark:bg-gray-800 border-r dark:border-gray-700">
-        <AdminSidebar />
-      </aside>
+    <div className="container mx-auto px-4 py-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 md:gap-8">
+        {/* Desktop Sidebar */}
+        <aside className="hidden md:flex flex-col col-span-1 border rounded-xl bg-card text-card-foreground shadow-sm h-fit">
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        <header className="h-16 bg-white dark:bg-gray-800 border-b dark:border-gray-700 flex items-center justify-between px-4 md:px-6 shadow-sm z-10 shrink-0">
-          <div className="flex items-center gap-3 md:hidden">
+          <AdminSidebar />
+        </aside>
+
+        {/* Mobile Sidebar & Main Content */}
+        <main className="col-span-1 md:col-span-3">
+          <div className="md:hidden flex items-center mb-6">
             <Sheet>
-              <SheetTrigger className="md:hidden text-gray-600 dark:text-gray-300 p-2 hover:bg-gray-100 rounded-md">
-                <Menu className="h-6 w-6" />
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <Menu className="h-4 w-4" /> Admin Menu
+                </Button>
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-64 bg-white dark:bg-gray-800 border-r-gray-200 dark:border-r-gray-700">
-                {/* Add VisuallyHidden Title for accessibility */}
                 <SheetTitle className="sr-only">Admin Navigation</SheetTitle>
+                <div className="p-6 border-b dark:border-gray-800">
+                  <h2 className="font-bold text-xl tracking-tight flex items-center text-blue-600 dark:text-blue-400">
+                    <ShieldCheck className="w-5 h-5 mr-2" /> Admin Portal
+                  </h2>
+                </div>
                 <AdminSidebar />
               </SheetContent>
             </Sheet>
-            <div className="flex items-center">
-              <ShieldCheck className="w-6 h-6 mr-2 text-blue-600 dark:text-blue-400" />
-              <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Admin</h1>
-            </div>
           </div>
-          <div className="hidden md:flex">
-            <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">System Overview</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <NotificationBell />
-          </div>
-        </header>
 
-        <div className="flex-1 overflow-auto p-4 md:p-8 bg-gray-50 dark:bg-gray-900">
-          {children}
-        </div>
-      </main>
+          <div className="bg-transparent">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

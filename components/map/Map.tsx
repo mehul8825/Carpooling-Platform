@@ -75,7 +75,7 @@ export default function Map({ pickupLat, pickupLng, dropLat, dropLng, routePath,
     return <div className="h-[400px] w-full bg-gray-100 rounded-md flex items-center justify-center">Loading Map...</div>;
   }
 
-  const defaultCenter: [number, number] = [28.6139, 77.2090]; // New Delhi as default
+  const defaultCenter: [number, number] = [23.0225, 72.5714]; // Ahmedabad, Gujarat as default
 
   return (
     <div className={isFullScreen ? "fixed inset-0 z-50 h-screen w-screen bg-white" : "h-[400px] w-full rounded-md overflow-hidden relative z-0"}>

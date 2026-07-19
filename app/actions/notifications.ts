@@ -43,13 +43,14 @@ export async function markNotificationsAsReadAction(notificationIds: string[]) {
   }
 }
 
-export async function createNotification(userId: string, title: string, message: string) {
+export async function createNotification(userId: string, title: string, message: string, link?: string) {
   try {
     await prisma.notification.create({
       data: {
         userId,
         title,
-        message
+        message,
+        link
       }
     });
   } catch (error) {

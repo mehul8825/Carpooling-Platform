@@ -475,14 +475,47 @@ export async function completeRideAction(rideId: string) {
     if (!user) return { success: false, error: "Not authenticated" };
 
     await prisma.$transaction(async (tx) => {
-      await tx.ride.update({
+      const ride = await tx.ride.update({
         where: { id: rideId },
         data: { status: "COMPLETED" }
       });
+      
+      const paidBookings = await tx.rideBooking.findMany({
+        where: { rideId, status: "APPROVED", paymentStatus: "PAID" }
+      });
+      
       await tx.rideBooking.updateMany({
         where: { rideId, status: "APPROVED" },
         data: { status: "COMPLETED" }
       });
+
+      const totalEarnings = paidBookings.reduce((sum, b) => sum + b.totalFare, 0);
+      
+      if (totalEarnings > 0) {
+        let wallet = await tx.wallet.findUnique({
+          where: { userId: ride.driverId }
+        });
+        
+        if (!wallet) {
+          wallet = await tx.wallet.create({
+            data: { userId: ride.driverId, balance: 0 }
+          });
+        }
+        
+        await tx.wallet.update({
+          where: { id: wallet.id },
+          data: { balance: { increment: totalEarnings } }
+        });
+        
+        await tx.transaction.create({
+          data: {
+            walletId: wallet.id,
+            amount: totalEarnings,
+            type: "CREDIT",
+            description: `Earnings from Ride to ${ride.dropLocation}`
+          }
+        });
+      }
     });
 
     revalidatePath("/offer-ride");
