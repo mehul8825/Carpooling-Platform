@@ -58,7 +58,7 @@ export function FindRideForm({ userId, savedLocations = [] }: { userId?: string,
   const [searched, setSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [bookingPending, setBookingPending] = useState<string | null>(null);
-  const [waitingForApproval, setWaitingForApproval] = useState<{ rideId: string, bookingId: string, driverId: string } | null>(null);
+
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -98,28 +98,14 @@ export function FindRideForm({ userId, savedLocations = [] }: { userId?: string,
     if (!socket) return;
     
     const handleBookingUpdate = ({ bookingId, status, rideId }: { bookingId: string, status: string, rideId: string }) => {
-      if (waitingForApproval && waitingForApproval.bookingId === bookingId) {
-        if (status === "APPROVED") {
-          toast.success("Your ride request was approved! Redirecting to live tracking...");
-          const targetRideId = waitingForApproval.rideId;
-          setWaitingForApproval(null);
-          setTimeout(() => {
-            router.push(`/ride/${targetRideId}`);
-          }, 1500);
-        } else if (status === "REJECTED") {
-          toast.error("Your ride request was declined by the driver.");
-          setWaitingForApproval(null);
-        }
-      } else {
-        toast.success(`Booking status updated to ${status}!`);
-      }
+      toast.info(`A booking status has been updated to ${status}. Check your history!`);
     };
     
     socket.on("booking_status_changed", handleBookingUpdate);
     return () => {
       socket.off("booking_status_changed", handleBookingUpdate);
     };
-  }, [socket, waitingForApproval, router]);
+  }, [socket]);
 
   const handleSearch = async () => {
     if (!pickup || !dropoff) return;
@@ -157,11 +143,11 @@ export function FindRideForm({ userId, savedLocations = [] }: { userId?: string,
         passengerDropLng: dropoff?.lng
       });
       if (res.success && res.booking && res.driverId) {
-        toast.success("Ride requested! Waiting for driver approval...");
-        setWaitingForApproval({ rideId, bookingId: res.booking.id, driverId: res.driverId });
+        toast.success("Ride requested! Track it in your Ride History.");
         if (socket) {
           socket.emit("booking_requested", { driverId: res.driverId, booking: res.booking, rideId });
         }
+        router.push("/employee/history");
       } else {
         toast.error(res.error || "Failed to request ride.");
       }
@@ -411,43 +397,6 @@ export function FindRideForm({ userId, savedLocations = [] }: { userId?: string,
           />
         </Card>
       </div>
-      <Dialog open={!!waitingForApproval} onOpenChange={(o) => {
-        if (!o && confirm("Are you sure you want to cancel waiting? Your request is still pending with the driver.")) {
-          setWaitingForApproval(null);
-        }
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl">Waiting for Approval</DialogTitle>
-            <DialogDescription className="text-center">
-              Please wait while the driver reviews your request. Do not close this screen.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center justify-center py-6 space-y-6">
-            <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            </div>
-            <div className="w-full space-y-2">
-              <Progress value={undefined} className="h-2 w-full animate-pulse bg-blue-100 [&>div]:bg-blue-600" />
-              <p className="text-xs text-center text-muted-foreground animate-pulse">Contacting driver...</p>
-            </div>
-            <Button variant="outline" className="w-full" onClick={() => {
-              if (confirm("Cancel this request?")) {
-                if (socket && waitingForApproval) {
-                  socket.emit("cancel_booking", { 
-                    driverId: waitingForApproval.driverId, 
-                    bookingId: waitingForApproval.bookingId 
-                  });
-                  cancelBookingAction(waitingForApproval.bookingId);
-                }
-                setWaitingForApproval(null);
-              }
-            }}>
-              Cancel Request
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

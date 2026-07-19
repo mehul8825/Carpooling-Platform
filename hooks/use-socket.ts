@@ -3,6 +3,12 @@
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
+declare global {
+  interface Window {
+    __socketInstance: Socket | null;
+  }
+}
+
 let socketInstance: Socket | null = null;
 
 export function useSocket(userId?: string) {
@@ -10,13 +16,16 @@ export function useSocket(userId?: string) {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    if (!socketInstance) {
+    if (typeof window === "undefined") return;
+
+    if (!window.__socketInstance) {
       // Connect to the same origin where the server is running
-      socketInstance = io({
+      window.__socketInstance = io({
         path: "/socket.io",
       });
     }
 
+    socketInstance = window.__socketInstance;
     setSocket(socketInstance);
 
     function onConnect() {

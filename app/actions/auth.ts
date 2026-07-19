@@ -170,7 +170,8 @@ export async function requestPasswordResetAction(email: string) {
       data: { otp, otpExpiry }
     });
 
-    await sendPasswordResetOTPEmail(email, otp);
+    // Send email asynchronously in the background so it doesn't block UI
+    sendPasswordResetOTPEmail(email, otp).catch(console.error);
 
     return { success: true };
   } catch (error) {

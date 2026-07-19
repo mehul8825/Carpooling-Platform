@@ -28,6 +28,8 @@ import { useRef } from "react";
 import { approveBookingAction, rejectBookingAction, completeRideAction } from "@/app/actions/ride";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
+import { useRazorpay } from "@/hooks/use-razorpay";
+import { payWithWalletAction, payWithExternalMethodAction } from "@/app/actions/wallet";
 
 const carIcon = L.divIcon({
   html: '<div style="background-color: white; border-radius: 50%; padding: 4px; box-shadow: 0 0 10px rgba(0,0,0,0.3); color: #3b82f6; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-car-front"><path d="m21 8-2 2-1.5-3.7A2 2 0 0 0 15.646 5H8.4a2 2 0 0 0-1.903 1.257L5 10 3 8"/><path d="M7 14h.01"/><path d="M17 14h.01"/><rect width="18" height="8" x="3" y="10" rx="2"/><path d="M5 18v2"/><path d="M19 18v2"/></svg></div>',
@@ -81,6 +83,9 @@ export function LiveTrackingClient({ ride, currentUserId, isDriver }: any) {
   const [msgInput, setMsgInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const simulationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"wallet" | "razorpay" | "cash" | null>(null);
+  const [isPaying, setIsPaying] = useState(false);
+  const isRazorpayLoaded = useRazorpay();
   const router = useRouter();
 
   useEffect(() => {
@@ -643,16 +648,123 @@ export function LiveTrackingClient({ ride, currentUserId, isDriver }: any) {
                 </div>
               )}
             </div>
+
+            {!isDriver && (
+              <div className="w-full space-y-2 mt-4">
+                <p className="text-sm font-medium text-center mb-2">Select Payment Method:</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button 
+                    variant={paymentMethod === "wallet" ? "default" : "outline"}
+                    className={paymentMethod === "wallet" ? "bg-emerald-600 hover:bg-emerald-700" : ""}
+                    onClick={() => setPaymentMethod("wallet")}
+                    disabled={isPaying}
+                  >
+                    Wallet
+                  </Button>
+                  <Button 
+                    variant={paymentMethod === "razorpay" ? "default" : "outline"}
+                    className={paymentMethod === "razorpay" ? "bg-emerald-600 hover:bg-emerald-700" : ""}
+                    onClick={() => setPaymentMethod("razorpay")}
+                    disabled={isPaying}
+                  >
+                    Razorpay
+                  </Button>
+                  <Button 
+                    variant={paymentMethod === "cash" ? "default" : "outline"}
+                    className={paymentMethod === "cash" ? "bg-emerald-600 hover:bg-emerald-700" : ""}
+                    onClick={() => setPaymentMethod("cash")}
+                    disabled={isPaying}
+                  >
+                    Cash
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter className="sm:justify-center">
-            <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={async () => {
-              if (isDriver) {
-                await completeRideAction(ride.id);
-              }
-              toast.success("Payment completed successfully!");
-              router.push("/employee/history");
-            }}>
-              {isDriver ? "Acknowledge Payments" : `Pay ₹${ride.farePerSeat}`}
+            <Button 
+              className="w-full bg-emerald-600 hover:bg-emerald-700" 
+              disabled={isPaying || (!isDriver && !paymentMethod)}
+              onClick={async () => {
+                setIsPaying(true);
+                try {
+                  if (isDriver) {
+                    await completeRideAction(ride.id);
+                    toast.success("Payment acknowledged successfully!");
+                    router.push("/employee/history");
+                    return;
+                  }
+                  
+                  // Passenger Flow
+                  const myBooking = ride.bookings.find((b: any) => b.passengerId === currentUserId);
+                  if (!myBooking) {
+                    toast.error("Booking not found");
+                    setIsPaying(false);
+                    return;
+                  }
+
+                  if (paymentMethod === "wallet") {
+                    const res = await payWithWalletAction(myBooking.id);
+                    if (res.success) {
+                      toast.success("Paid from Wallet successfully!");
+                      router.push("/employee/history");
+                    } else {
+                      toast.error(res.error || "Failed to pay with Wallet");
+                    }
+                  } else if (paymentMethod === "razorpay") {
+                    if (!isRazorpayLoaded) {
+                      toast.error("Payment gateway is loading...");
+                      setIsPaying(false);
+                      return;
+                    }
+                    
+                    const options = {
+                      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_dummy",
+                      amount: ride.farePerSeat * 100, // in paise
+                      currency: "INR",
+                      name: "ShareRide",
+                      description: `Ride to ${ride.dropLocation}`,
+                      handler: async (response: any) => {
+                        const res = await payWithExternalMethodAction(myBooking.id, "RAZORPAY");
+                        if (res.success) {
+                          toast.success("Razorpay payment successful!");
+                          router.push("/employee/history");
+                        } else {
+                          toast.error(res.error || "Razorpay payment failed");
+                          setIsPaying(false);
+                        }
+                      },
+                      theme: {
+                        color: "#10b981",
+                      },
+                    };
+                    
+                    if ((window as any).Razorpay) {
+                      const rzp = new (window as any).Razorpay(options);
+                      rzp.on("payment.failed", function (response: any) {
+                        toast.error(`Payment failed: ${response.error.description}`);
+                        setIsPaying(false);
+                      });
+                      rzp.open();
+                    } else {
+                      toast.error("Razorpay SDK not available");
+                      setIsPaying(false);
+                    }
+                  } else if (paymentMethod === "cash") {
+                    const res = await payWithExternalMethodAction(myBooking.id, "CASH");
+                    if (res.success) {
+                      toast.success("Cash payment recorded successfully!");
+                      router.push("/employee/history");
+                    } else {
+                      toast.error(res.error || "Failed to record cash payment");
+                    }
+                  }
+                } finally {
+                  setIsPaying(false);
+                }
+              }}
+            >
+              {isPaying ? "Processing..." : isDriver ? "Acknowledge Payments" : `Pay ₹${ride.farePerSeat}`}
             </Button>
           </DialogFooter>
         </DialogContent>

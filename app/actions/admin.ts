@@ -89,7 +89,8 @@ export async function addEmployeeAction(data: { name: string; email: string; pho
       }
     });
 
-    await sendTemporaryPasswordEmail(data.email, data.name, tempPassword);
+    // Send email asynchronously in the background so it doesn't block UI
+    sendTemporaryPasswordEmail(data.email, data.name, tempPassword).catch(console.error);
 
     revalidatePath("/admin/employees");
     return { success: true };
@@ -118,7 +119,8 @@ export async function resendCredentialsAction(userId: string) {
       }
     });
 
-    await sendTemporaryPasswordEmail(employee.email, employee.name, tempPassword);
+    // Send email asynchronously in the background so it doesn't block UI
+    sendTemporaryPasswordEmail(employee.email, employee.name, tempPassword).catch(console.error);
 
     return { success: true };
   } catch (error) {
