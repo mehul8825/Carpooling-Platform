@@ -7,16 +7,23 @@ import { Button } from "@/components/ui/button";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-// Fix Leaflet's default icon issue with Webpack
-const icon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  tooltipAnchor: [16, -28],
-  shadowSize: [41, 41],
+// Custom markers using MapPin SVG
+const pickupIcon = L.divIcon({
+  html: `<div style="color: #10b981; filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.4));">
+    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>
+  </div>`,
+  className: '',
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+});
+
+const dropoffIcon = L.divIcon({
+  html: `<div style="color: #3b82f6; filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.4));">
+    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>
+  </div>`,
+  className: '',
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
 });
 
 interface MapProps {
@@ -82,11 +89,10 @@ export default function Map({ pickupLat, pickupLng, dropLat, dropLng, routePath,
       </Button>
 
       <style jsx global>{`
-        .leaflet-container.crosshair-cursor-enabled {
-          cursor: crosshair !important;
-        }
-        .leaflet-container.crosshair-cursor-enabled .leaflet-interactive {
-          cursor: crosshair !important;
+        .leaflet-container.crosshair-cursor-enabled,
+        .leaflet-container.crosshair-cursor-enabled .leaflet-interactive,
+        .leaflet-container.crosshair-cursor-enabled .leaflet-grab {
+          cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>') 12 24, crosshair !important;
         }
       `}</style>
 
@@ -104,13 +110,13 @@ export default function Map({ pickupLat, pickupLng, dropLat, dropLng, routePath,
         <ClickHandler onMapClick={onMapClick} />
 
         {pickupLat && pickupLng && (
-          <Marker position={[pickupLat, pickupLng]} icon={icon}>
+          <Marker position={[pickupLat, pickupLng]} icon={pickupIcon}>
             <Popup>Pickup Location</Popup>
           </Marker>
         )}
 
         {dropLat && dropLng && (
-          <Marker position={[dropLat, dropLng]} icon={icon}>
+          <Marker position={[dropLat, dropLng]} icon={dropoffIcon}>
             <Popup>Drop-off Location</Popup>
           </Marker>
         )}

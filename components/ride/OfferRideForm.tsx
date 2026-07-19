@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import DynamicMap from "@/components/map/DynamicMap";
 import { LocationSearch } from "@/components/map/LocationSearch";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,8 @@ export function OfferRideForm({ userId }: { userId?: string }) {
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [published, setPublished] = useState(false);
+  const [publishedRideId, setPublishedRideId] = useState<string | null>(null);
+  const router = useRouter();
 
   // Ride config
   const [seats, setSeats] = useState("3");
@@ -93,7 +95,7 @@ export function OfferRideForm({ userId }: { userId?: string }) {
         if (socket && res.ride) {
           socket.emit("new_ride_published", res.ride);
         }
-        setPublished(true);
+        setPublishedRideId(res.ride?.id || null);
       } else {
         toast.error(res.error || "Failed to publish ride.");
       }
@@ -122,7 +124,7 @@ export function OfferRideForm({ userId }: { userId?: string }) {
     }
   };
 
-  if (published) {
+  if (publishedRideId) {
     return (
       <Card className="max-w-lg mx-auto text-center py-12">
         <CardContent className="space-y-4">
@@ -130,13 +132,18 @@ export function OfferRideForm({ userId }: { userId?: string }) {
             <CheckCircle className="h-8 w-8" />
           </div>
           <h2 className="text-2xl font-bold tracking-tight">Ride Published!</h2>
-          <p className="text-muted-foreground">
-            Your ride is now visible to passengers searching nearby routes. You&apos;ll see booking
-            requests here when passengers request a seat.
+          <p className="text-muted-foreground mb-4">
+            Your ride is now live! Go to the Live Tracking screen to wait for passenger requests.
+            You can approve passengers on the go while driving.
           </p>
-          <Button onClick={() => { setPublished(false); setRouteInfo(null); setPickup(null); setDropoff(null); setFare(""); setDateTime(""); }}>
-            Publish Another Ride
-          </Button>
+          <div className="flex gap-3 justify-center">
+            <Button onClick={() => router.push(`/ride/${publishedRideId}`)} className="bg-blue-600 hover:bg-blue-700">
+              Go to Live Tracking
+            </Button>
+            <Button variant="outline" onClick={() => { setPublishedRideId(null); setRouteInfo(null); setPickup(null); setDropoff(null); setFare(""); setDateTime(""); }}>
+              Publish Another Ride
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );

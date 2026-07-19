@@ -36,18 +36,16 @@ app.prepare().then(() => {
       socket.join(userId);
       console.log(`Socket ${socket.id} joined personal room ${userId}`);
     });
-    // User searching for rides joins a geo-based room (approx 11km grid)
-    socket.on('join_geo_room', ({ lat, lng }: { lat: number, lng: number }) => {
-      const geoRoom = `geo:${Math.round(lat * 10) / 10}:${Math.round(lng * 10) / 10}`;
-      socket.join(geoRoom);
-      console.log(`Socket ${socket.id} joined geo room ${geoRoom}`);
+    // User searching for rides joins a global search room
+    socket.on('join_search_room', () => {
+      socket.join('search_room');
+      console.log(`Socket ${socket.id} joined search room`);
     });
 
-    // Broadcast a newly published ride to the specific geo-room
+    // Broadcast a newly published ride to all searchers
     socket.on('new_ride_published', (ride: any) => {
-      const geoRoom = `geo:${Math.round(ride.pickupLat * 10) / 10}:${Math.round(ride.pickupLng * 10) / 10}`;
-      socket.to(geoRoom).emit('ride_available', ride);
-      console.log(`Broadcasted new ride ${ride.id} to geo room ${geoRoom}`);
+      socket.to('search_room').emit('ride_available', ride);
+      console.log(`Broadcasted new ride ${ride.id} to search room`);
     });
 
     // Ride Tracking Rooms
@@ -60,16 +58,35 @@ app.prepare().then(() => {
       socket.to(`ride:${rideId}`).emit('ride_location_updated', { rideId, lat, lng });
     });
 
+    socket.on('complete_ride', (rideId: string) => {
+      io.to(`ride:${rideId}`).emit('ride_completed', rideId);
+      console.log(`Ride ${rideId} completed`);
+    });
+
     // Relay a booking request specifically to the driver
-    socket.on('booking_requested', ({ driverId, booking }: { driverId: string, booking: any }) => {
-      io.to(driverId).emit('new_booking_request', booking);
+    socket.on('booking_requested', ({ driverId, booking, rideId }: { driverId: string, booking: any, rideId: string }) => {
+      io.to(driverId).emit('new_booking_request', { booking, rideId });
+      io.to(driverId).emit('new_notification');
       console.log(`Relayed booking request to driver ${driverId}`);
     });
 
+    // Relay a booking cancellation to the driver
+    socket.on('cancel_booking', ({ driverId, bookingId }: { driverId: string, bookingId: string }) => {
+      io.to(driverId).emit('booking_cancelled', bookingId);
+      console.log(`Relayed booking cancellation to driver ${driverId}`);
+    });
+
     // Relay booking status update (approve/reject) to the passenger
-    socket.on('booking_updated', ({ passengerId, bookingId, status }: { passengerId: string, bookingId: string, status: string }) => {
-      io.to(passengerId).emit('booking_status_changed', { bookingId, status });
+    socket.on('booking_updated', ({ passengerId, bookingId, status, rideId }: { passengerId: string, bookingId: string, status: string, rideId: string }) => {
+      io.to(passengerId).emit('booking_status_changed', { bookingId, status, rideId });
+      io.to(passengerId).emit('new_notification');
       console.log(`Relayed booking update to passenger ${passengerId}`);
+    });
+
+    // Chat functionality
+    socket.on('send_chat_message', ({ toUserId, text, senderId }: { toUserId: string, text: string, senderId: string }) => {
+      io.to(toUserId).emit('receive_chat_message', { senderId, toUserId, text, timestamp: Date.now() });
+      console.log(`Relayed chat message from ${senderId} to ${toUserId}`);
     });
 
     socket.on('disconnect', () => {

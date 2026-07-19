@@ -174,6 +174,10 @@ export async function searchRidesAction(data: {
 export async function requestBookingAction(data: {
   rideId: string;
   seatsBooked: number;
+  passengerPickupLat?: number;
+  passengerPickupLng?: number;
+  passengerDropLat?: number;
+  passengerDropLng?: number;
 }) {
   try {
     const user = await getCurrentUserAction();
@@ -199,29 +203,45 @@ export async function requestBookingAction(data: {
 
     if (existingBooking) return { success: false, error: "You already have a booking on this ride" };
 
-    const booking = await prisma.rideBooking.create({
-      data: {
-        rideId: data.rideId,
-        passengerId: userId,
-        seatsBooked: data.seatsBooked,
-        totalFare: ride.farePerSeat * data.seatsBooked,
-        status: "REQUESTED",
-      },
-      include: {
-        passenger: { select: { id: true, name: true, email: true } }
-      }
-    });
-
-    // Notify the driver
-    await prisma.notification.create({
-      data: {
-        userId: ride.driverId,
-        title: "New Seat Request",
-        message: `${user?.name || "Someone"} requested ${data.seatsBooked} seat(s) on your ride to ${ride.dropLocation}.`
-      }
+    const booking = await prisma.$transaction(async (tx) => {
+      const newBooking = await tx.rideBooking.create({
+        data: {
+          rideId: data.rideId,
+          passengerId: userId,
+          seatsBooked: data.seatsBooked,
+          totalFare: ride.farePerSeat * data.seatsBooked,
+          passengerPickupLat: data.passengerPickupLat,
+          passengerPickupLng: data.passengerPickupLng,
+          passengerDropLat: data.passengerDropLat,
+          passengerDropLng: data.passengerDropLng,
+          status: "REQUESTED",
+        },
+        include: {
+          passenger: {
+            select: { name: true, phone: true }
+          }
+        }
+      });
+      
+      await tx.notification.create({
+        data: {
+          userId: ride.driverId,
+          title: "New Ride Request",
+          message: `${user.name || 'A user'} requested ${data.seatsBooked} seat(s) for your ride to ${ride.dropLocation}.`
+        }
+      });
+      
+      return newBooking;
     });
 
     revalidatePath("/offer-ride");
+    revalidatePath("/offer-ride/requests");
+    revalidatePath("/offer-ride");
+    revalidatePath("/offer-ride/requests");
+    revalidatePath("/find-ride");
+    revalidatePath("/find-ride/bookings");
+    revalidatePath("/employee");
+    revalidatePath(`/ride/${data.rideId}`);
     return { success: true, booking, driverId: ride.driverId };
   } catch (error: any) {
     console.error("Failed to request booking:", error);
@@ -251,19 +271,26 @@ export async function approveBookingAction(bookingId: string) {
       return { success: false, error: "Not enough seats available" };
     }
 
-    await prisma.$transaction([
-      prisma.rideBooking.update({
+    await prisma.$transaction(async (tx) => {
+      await tx.rideBooking.update({
         where: { id: bookingId },
         data: { status: "APPROVED" },
-      }),
-      prisma.ride.update({
+      });
+      await tx.ride.update({
         where: { id: booking.rideId },
         data: { 
           availableSeats: { decrement: booking.seatsBooked },
           status: "ONGOING"
         },
-      }),
-    ]);
+      });
+      await tx.notification.create({
+        data: {
+          userId: booking.passengerId,
+          title: "Ride Request Approved",
+          message: `Your request for ${booking.seatsBooked} seat(s) to ${booking.ride.dropLocation} was approved!`
+        }
+      });
+    });
     
     // Automatically reject any other pending requests from this same passenger for this ride
     await prisma.rideBooking.updateMany({
@@ -276,20 +303,48 @@ export async function approveBookingAction(bookingId: string) {
       data: { status: "REJECTED" }
     });
 
-    // Notify passenger
-    await prisma.notification.create({
-      data: {
-        userId: booking.passengerId,
-        title: "Booking Accepted",
-        message: `${user?.name || "Driver"} accepted your seat request for the ride to ${booking.ride.dropLocation}.`
+    revalidatePath("/offer-ride");
+    revalidatePath(`/ride/${booking.rideId}`);
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: "Failed to approve booking" };
+  }
+}
+
+export async function cancelBookingAction(bookingId: string) {
+  try {
+    const user = await getCurrentUserAction();
+    if (!user) return { success: false, error: "Unauthorized" };
+
+    const booking = await prisma.rideBooking.findUnique({
+      where: { id: bookingId },
+      include: { ride: true }
+    });
+
+    if (!booking) return { success: false, error: "Booking not found" };
+
+    // Update status and restore seats if it was already approved
+    await prisma.$transaction(async (tx) => {
+      await tx.rideBooking.update({
+        where: { id: bookingId },
+        data: { status: "CANCELLED" }
+      });
+
+      if (booking.status === "APPROVED") {
+        await tx.ride.update({
+          where: { id: booking.rideId },
+          data: { availableSeats: { increment: booking.seatsBooked } }
+        });
       }
     });
 
     revalidatePath("/offer-ride");
+    revalidatePath("/find-ride");
     return { success: true };
   } catch (error) {
     console.error(error);
-    return { success: false, error: "Failed to book ride" };
+    return { success: false, error: "Failed to cancel booking" };
   }
 }
 
@@ -308,9 +363,19 @@ export async function rejectBookingAction(bookingId: string) {
     if (booking.ride.driverId !== userId) return { success: false, error: "Unauthorized" };
     if (booking.status !== "REQUESTED") return { success: false, error: "Booking is not in REQUESTED state" };
 
-    await prisma.rideBooking.update({
-      where: { id: bookingId },
-      data: { status: "REJECTED" },
+    await prisma.$transaction(async (tx) => {
+      await tx.rideBooking.update({
+        where: { id: bookingId },
+        data: { status: "REJECTED" }
+      });
+
+      await tx.notification.create({
+        data: {
+          userId: booking.passengerId,
+          title: "Ride Request Declined",
+          message: `Your request for ${booking.seatsBooked} seat(s) to ${booking.ride.dropLocation} was declined.`
+        }
+      });
     });
 
     // Update booking status for THIS and ALL other duplicate requests from the same user for this ride
@@ -333,6 +398,7 @@ export async function rejectBookingAction(bookingId: string) {
     });
 
     revalidatePath("/offer-ride");
+    revalidatePath(`/ride/${booking.rideId}`);
     return { success: true };
   } catch (error: any) {
     console.error("Failed to reject booking:", error);
@@ -400,5 +466,33 @@ export async function getMyBookingsAction() {
   } catch (error: any) {
     console.error("Failed to get my bookings:", error);
     return { success: false, bookings: [] };
+  }
+}
+
+export async function completeRideAction(rideId: string) {
+  try {
+    const user = await getCurrentUserAction();
+    if (!user) return { success: false, error: "Not authenticated" };
+
+    await prisma.$transaction(async (tx) => {
+      await tx.ride.update({
+        where: { id: rideId },
+        data: { status: "COMPLETED" }
+      });
+      await tx.rideBooking.updateMany({
+        where: { rideId, status: "APPROVED" },
+        data: { status: "COMPLETED" }
+      });
+    });
+
+    revalidatePath("/offer-ride");
+    revalidatePath("/offer-ride/requests");
+    revalidatePath("/find-ride");
+    revalidatePath("/find-ride/bookings");
+    revalidatePath("/employee");
+    revalidatePath("/employee/history");
+    return { success: true };
+  } catch (error) {
+    return { success: false };
   }
 }

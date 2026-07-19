@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import DynamicMap from "@/components/map/DynamicMap";
 import { LocationSearch } from "@/components/map/LocationSearch";
 import { Button } from "@/components/ui/button";
@@ -8,10 +9,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { searchRidesAction, requestBookingAction } from "@/app/actions/ride";
+import { searchRidesAction, requestBookingAction, cancelBookingAction } from "@/app/actions/ride";
 import { toast } from "sonner";
-import { Loader2, MapPin, Search, Clock, Users, IndianRupee, Car, Route } from "lucide-react";
+import { Loader2, MapPin, Search, Clock, Users, IndianRupee, Car, Route, CheckCircle, XCircle } from "lucide-react";
 import { useSocket } from "@/hooks/use-socket";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -51,17 +54,20 @@ export function FindRideForm({ userId }: { userId?: string }) {
   const [dropoff, setDropoff] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [rides, setRides] = useState<MatchedRide[]>([]);
   const [mapSelectionMode, setMapSelectionMode] = useState<"pickup" | "dropoff" | null>(null);
+  const [seatsBooked, setSeatsBooked] = useState<number>(1);
   const [searched, setSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [bookingPending, setBookingPending] = useState<string | null>(null);
+  const [waitingForApproval, setWaitingForApproval] = useState<{ rideId: string, bookingId: string, driverId: string } | null>(null);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   // Listen for real-time new rides
   useEffect(() => {
     if (!socket || !searched || !pickup || !dropoff) return;
 
-    // Join the geo-room based on pickup location to get relevant rides
-    socket.emit("join_geo_room", { lat: pickup.lat, lng: pickup.lng });
+    // Join the search room to get relevant rides globally (then filter by route)
+    socket.emit("join_search_room");
 
     const handleNewRide = (ride: any) => {
       const pickupDist = haversineKm(pickup.lat, pickup.lng, ride.pickupLat, ride.pickupLng);
@@ -91,16 +97,29 @@ export function FindRideForm({ userId }: { userId?: string }) {
   useEffect(() => {
     if (!socket) return;
     
-    const handleBookingUpdate = ({ bookingId, status }: { bookingId: string, status: string }) => {
-      toast.success(`Booking status updated to ${status}!`);
-      // Optional: Update the specific ride UI or a general booking state
+    const handleBookingUpdate = ({ bookingId, status, rideId }: { bookingId: string, status: string, rideId: string }) => {
+      if (waitingForApproval && waitingForApproval.bookingId === bookingId) {
+        if (status === "APPROVED") {
+          toast.success("Your ride request was approved! Redirecting to live tracking...");
+          const targetRideId = waitingForApproval.rideId;
+          setWaitingForApproval(null);
+          setTimeout(() => {
+            router.push(`/ride/${targetRideId}`);
+          }, 1500);
+        } else if (status === "REJECTED") {
+          toast.error("Your ride request was declined by the driver.");
+          setWaitingForApproval(null);
+        }
+      } else {
+        toast.success(`Booking status updated to ${status}!`);
+      }
     };
     
     socket.on("booking_status_changed", handleBookingUpdate);
     return () => {
       socket.off("booking_status_changed", handleBookingUpdate);
     };
-  }, [socket]);
+  }, [socket, waitingForApproval, router]);
 
   const handleSearch = async () => {
     if (!pickup || !dropoff) return;
@@ -129,11 +148,19 @@ export function FindRideForm({ userId }: { userId?: string }) {
   const handleBook = (rideId: string) => {
     setBookingPending(rideId);
     startTransition(async () => {
-      const res = await requestBookingAction({ rideId, seatsBooked: 1 });
-      if (res.success) {
-        toast.success("Ride requested! The driver will review your request.");
-        if (socket && res.booking && res.driverId) {
-          socket.emit("booking_requested", { driverId: res.driverId, booking: res.booking });
+      const res = await requestBookingAction({ 
+        rideId, 
+        seatsBooked,
+        passengerPickupLat: pickup?.lat,
+        passengerPickupLng: pickup?.lng,
+        passengerDropLat: dropoff?.lat,
+        passengerDropLng: dropoff?.lng
+      });
+      if (res.success && res.booking && res.driverId) {
+        toast.success("Ride requested! Waiting for driver approval...");
+        setWaitingForApproval({ rideId, bookingId: res.booking.id, driverId: res.driverId });
+        if (socket) {
+          socket.emit("booking_requested", { driverId: res.driverId, booking: res.booking, rideId });
         }
       } else {
         toast.error(res.error || "Failed to request ride.");
@@ -221,7 +248,26 @@ export function FindRideForm({ userId }: { userId?: string }) {
               />
             </div>
 
-            <Button className="w-full" onClick={handleSearch} disabled={!pickup || !dropoff || isSearching}>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Users className="h-3.5 w-3.5 text-slate-600" /> Number of Seats
+              </Label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4].map(num => (
+                  <Button
+                    key={num}
+                    type="button"
+                    variant={seatsBooked === num ? "default" : "outline"}
+                    className="flex-1 transition-all"
+                    onClick={() => setSeatsBooked(num)}
+                  >
+                    {num}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <Button className="w-full mt-2" onClick={handleSearch} disabled={!pickup || !dropoff || isSearching}>
               {isSearching && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isSearching ? "Searching..." : "Search Rides"}
             </Button>
@@ -333,6 +379,43 @@ export function FindRideForm({ userId }: { userId?: string }) {
           />
         </Card>
       </div>
+      <Dialog open={!!waitingForApproval} onOpenChange={(o) => {
+        if (!o && confirm("Are you sure you want to cancel waiting? Your request is still pending with the driver.")) {
+          setWaitingForApproval(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl">Waiting for Approval</DialogTitle>
+            <DialogDescription className="text-center">
+              Please wait while the driver reviews your request. Do not close this screen.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center py-6 space-y-6">
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+            <div className="w-full space-y-2">
+              <Progress value={undefined} className="h-2 w-full animate-pulse bg-blue-100 [&>div]:bg-blue-600" />
+              <p className="text-xs text-center text-muted-foreground animate-pulse">Contacting driver...</p>
+            </div>
+            <Button variant="outline" className="w-full" onClick={() => {
+              if (confirm("Cancel this request?")) {
+                if (socket && waitingForApproval) {
+                  socket.emit("cancel_booking", { 
+                    driverId: waitingForApproval.driverId, 
+                    bookingId: waitingForApproval.bookingId 
+                  });
+                  cancelBookingAction(waitingForApproval.bookingId);
+                }
+                setWaitingForApproval(null);
+              }
+            }}>
+              Cancel Request
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

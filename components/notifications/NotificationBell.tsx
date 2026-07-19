@@ -9,7 +9,9 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { getUnreadNotificationsAction, markNotificationsAsReadAction } from "@/app/actions/notifications";
+import { getCurrentUserAction } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
+import { useSocket } from "@/hooks/use-socket";
 
 interface Notification {
   id: string;
@@ -22,26 +24,48 @@ interface Notification {
 export function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const { socket } = useSocket(userId || "");
 
-  // Poll for notifications every 10 seconds
+  // Fetch initial user id and notifications
   useEffect(() => {
     let mounted = true;
     
-    const fetchNotifications = async () => {
-      const res = await getUnreadNotificationsAction();
-      if (res.success && res.data && mounted) {
-        setNotifications(res.data);
+    const init = async () => {
+      const user = await getCurrentUserAction();
+      if (user && mounted) {
+        setUserId(user.id);
       }
     };
-
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 10000);
-
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
+    init();
+    return () => { mounted = false; };
   }, []);
+
+  const fetchNotifications = async () => {
+    const res = await getUnreadNotificationsAction();
+    if (res.success && res.data) {
+      setNotifications(res.data);
+    }
+  };
+
+  useEffect(() => {
+    if (userId) {
+      fetchNotifications();
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleNewNotification = () => {
+      fetchNotifications();
+    };
+    
+    socket.on("new_notification", handleNewNotification);
+    return () => {
+      socket.off("new_notification", handleNewNotification);
+    };
+  }, [socket]);
 
   const handleMarkAsRead = async (ids: string[]) => {
     // Optimistic update
@@ -56,7 +80,7 @@ export function NotificationBell() {
       <PopoverTrigger className="relative p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors flex items-center justify-center">
         <Bell className="w-5 h-5 text-slate-600 dark:text-slate-300" />
         {notifications.length > 0 && (
-          <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-gray-800">
+          <span className="absolute top-0 right-0 w-4 h-4 bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-gray-800">
             {notifications.length > 9 ? '9+' : notifications.length}
           </span>
         )}

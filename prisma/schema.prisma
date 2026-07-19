@@ -102,6 +102,12 @@ model RideBooking {
   seatsBooked     Int
   totalFare       Float
   
+  // Passenger Specific Geographical Data
+  passengerPickupLat Float?
+  passengerPickupLng Float?
+  passengerDropLat   Float?
+  passengerDropLng   Float?
+  
   // Driver Approval Flow
   status          String   @default("REQUESTED") // REQUESTED, APPROVED, REJECTED, COMPLETED, CANCELLED
   

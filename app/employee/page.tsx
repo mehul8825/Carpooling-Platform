@@ -97,8 +97,8 @@ export default async function EmployeeDashboardOverview() {
             <CardHeader className="bg-blue-50/50 pb-4 border-b border-blue-100">
               <CardTitle className="text-blue-800 flex items-center">
                 <span className="relative flex h-3 w-3 mr-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                 </span>
                 Pending Seat Requests ({pendingRequests.length})
               </CardTitle>
@@ -153,9 +153,11 @@ export default async function EmployeeDashboardOverview() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold px-2 py-1 bg-green-100 text-green-700 rounded-full">Driver</span>
-                      <Link href={`/ride/${ride.id}`}>
-                        <Button size="sm" variant="outline" className="h-7 text-xs px-2">Track</Button>
-                      </Link>
+                      {ride.status !== "COMPLETED" && (
+                        <Link href={`/ride/${ride.id}`}>
+                          <Button size="sm" variant="outline" className="h-7 text-xs px-2">Track</Button>
+                        </Link>
+                      )}
                     </div>
                   </div>
                 ))}

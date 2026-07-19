@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/use-debounce";
-import { MapPin, Loader2, Navigation } from "lucide-react";
+import { MapPin, Loader2, MapPinHouse } from "lucide-react";
 import { toast } from "sonner";
 
 interface LocationResult {
@@ -25,6 +25,13 @@ export function LocationSearch({ placeholder = "Search location...", onSelect, d
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const justSelected = useRef(false);
+
+  useEffect(() => {
+    if (defaultValue && defaultValue !== query) {
+      justSelected.current = true;
+      setQuery(defaultValue);
+    }
+  }, [defaultValue]);
 
   const debouncedQuery = useDebounce(query, 500);
 
@@ -131,7 +138,7 @@ export function LocationSearch({ placeholder = "Search location...", onSelect, d
               className="text-muted-foreground hover:text-primary transition-colors p-1 rounded-md hover:bg-muted"
               title="Use current location"
             >
-              <Navigation className="h-4 w-4" />
+              <MapPinHouse className="h-4 w-4" />
             </button>
           )}
         </div>
