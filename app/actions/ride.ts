@@ -227,7 +227,8 @@ export async function requestBookingAction(data: {
         data: {
           userId: ride.driverId,
           title: "New Ride Request",
-          message: `${user.name || 'A user'} requested ${data.seatsBooked} seat(s) for your ride to ${ride.dropLocation}.`
+          message: `${user.name || 'A user'} requested ${data.seatsBooked} seat(s) for your ride to ${ride.dropLocation}.`,
+          link: "/offer-ride"
         }
       });
       
@@ -287,7 +288,8 @@ export async function approveBookingAction(bookingId: string) {
         data: {
           userId: booking.passengerId,
           title: "Ride Request Approved",
-          message: `Your request for ${booking.seatsBooked} seat(s) to ${booking.ride.dropLocation} was approved!`
+          message: `Your request for ${booking.seatsBooked} seat(s) to ${booking.ride.dropLocation} was approved!`,
+          link: "/employee/history"
         }
       });
     });
@@ -373,7 +375,8 @@ export async function rejectBookingAction(bookingId: string) {
         data: {
           userId: booking.passengerId,
           title: "Ride Request Declined",
-          message: `Your request for ${booking.seatsBooked} seat(s) to ${booking.ride.dropLocation} was declined.`
+          message: `Your request for ${booking.seatsBooked} seat(s) to ${booking.ride.dropLocation} was declined.`,
+          link: "/employee/history"
         }
       });
     });
@@ -386,15 +389,6 @@ export async function rejectBookingAction(bookingId: string) {
         status: "REQUESTED"
       },
       data: { status: "REJECTED" }
-    });
-
-    // Notify passenger
-    await prisma.notification.create({
-      data: {
-        userId: booking.passengerId,
-        title: "Booking Rejected",
-        message: `${user?.name || "Driver"} rejected your seat request for the ride to ${booking.ride.dropLocation}.`
-      }
     });
 
     revalidatePath("/offer-ride");

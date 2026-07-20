@@ -12,6 +12,7 @@ import { getUnreadNotificationsAction, markNotificationsAsReadAction } from "@/a
 import { getCurrentUserAction } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
 import { useSocket } from "@/hooks/use-socket";
+import { useRouter } from "next/navigation";
 
 interface Notification {
   id: string;
@@ -27,6 +28,7 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const { socket } = useSocket(userId || "");
+  const router = useRouter();
 
   // Fetch initial user id and notifications
   useEffect(() => {
@@ -110,9 +112,17 @@ export function NotificationBell() {
               {notifications.map(notification => (
                 <div
                   key={notification.id}
+                  onClick={() => {
+                    if (notification.link) {
+                      setIsOpen(false);
+                      handleMarkAsRead([notification.id]);
+                      router.push(notification.link);
+                    }
+                  }}
                   className={cn(
-                    "px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-50 dark:border-slate-800 last:border-0",
-                    !notification.isRead && "bg-blue-50/50 dark:bg-blue-900/10"
+                    "px-4 py-3 transition-colors border-b border-slate-50 dark:border-slate-800 last:border-0",
+                    !notification.isRead && "bg-blue-50/50 dark:bg-blue-900/10",
+                    notification.link ? "cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
                   )}
                 >
                   <div className="flex justify-between items-start mb-1">
@@ -136,17 +146,9 @@ export function NotificationBell() {
                     </button>
 
                     {notification.link && (
-                      <a
-                        href={notification.link}
-                        onClick={(e) => {
-                          // Optionally close popover or mark as read when they view it
-                          setIsOpen(false);
-                          handleMarkAsRead([notification.id]);
-                        }}
-                        className="text-[11px] font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 ml-auto bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded transition-colors"
-                      >
-                        View Details
-                      </a>
+                      <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400 ml-auto bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded transition-colors">
+                        Click to View
+                      </span>
                     )}
                   </div>
                 </div>

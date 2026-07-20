@@ -30,7 +30,7 @@ export async function approveDriverAction(userId: string) {
     }
 
     // Emit notification to user
-    await createNotification(userId, "Profile Approved", "Your driver profile has been approved! You can now offer rides.");
+    await createNotification(userId, "Profile Approved", "Your driver profile has been approved! You can now offer rides.", "/offer-ride");
 
     revalidatePath("/admin");
     return { success: true };
@@ -55,7 +55,7 @@ export async function rejectDriverAction(userId: string, reason: string) {
     });
 
     // Emit notification to user
-    await createNotification(userId, "Profile Rejected", `Your driver profile was rejected. Reason: ${reason}`);
+    await createNotification(userId, "Profile Rejected", `Your driver profile was rejected. Reason: ${reason}`, "/employee/settings");
 
     revalidatePath("/admin");
     return { success: true };
